@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Signature de document - MAPHAR</title>
+
+<!-- PDF.js : affichage du PDF dans le navigateur -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+
+<!-- signature_pad : capture de la signature tactile -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/signature_pad/4.1.7/signature_pad.umd.min.js"></script>
+
+<!-- Firebase (compat, plus simple pour débuter) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    background: #f4f4f2;
+    color: #2b2b2b;
+  }
+  header {
+    background: #ffffff;
+    padding: 14px 16px;
+    border-bottom: 1px solid #e0e0dc;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  header h1 {
+    font-size: 16px;
+    margin: 0 0 2px 0;
+    color: #2b2b2b;
+  }
+  header p {
+    font-size: 13px;
+    margin: 0;
+    color: #6b7b6f;
+  }
+  #statut-badge {
+    display: inline-block;
+    margin-top: 6px;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .badge-attente { background: #fdf2d0; color: #8a6d1a; }
+  .badge-signe { background: #e3ecdf; color: #4a6b4d; }
+
+  #pdf-container {
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+  #pdf-container canvas {
+    width: 100%;
+    max-width: 700px;
+    border: 1px solid #ddd;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    background: white;
+  }
+
+  #chargement {
+    text-align: center;
+    padding: 40px 20px;
+    color: #6b7b6f;
+  }
+
+  #zone-signature {
+    display: none;
+    background: white;
+    margin: 16px 12px;
+    padding: 16px;
+    border-radius: 10px;
+    border: 1px solid #e0e0dc;
+  }
+  #zone-signature h2 {
+    font-size: 15px;
+    margin: 0 0 10px 0;
+    color: #2b2b2b;
+  }
+  #pad-wrapper {
+    border: 2px dashed #b9c9bb;
+    border-radius: 8px;
+    background: #fafaf8;
+    touch-action: none;
+  }
+  #signature-pad {
+    width: 100%;
+    height: 180px;
+    touch-action: none;
+  }
+  .actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 12px;
+  }
+  button {
+    flex: 1;
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  #btn-effacer {
+    background: #eee;
+    color: #555;
+  }
+  #btn-valider {
+    background: #4a6b4d;
+    color: white;
+  }
+  #btn-valider:disabled {
+    background: #c9d3ca;
+    cursor: not-allowed;
+  }
+  #consentement {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-top: 14px;
+    font-size: 13px;
+    color: #555;
+  }
+  #consentement input { margin-top: 3px; }
+
+  #message-final {
+    display: none;
+    text-align: center;
+    padding: 50px 24px;
+  }
+  #message-final .icone { font-size: 48px; margin-bottom: 12px; }
+  #message-final h2 { color: #4a6b4d; margin-bottom: 8px; }
+  #message-final p { color: #6b7b6f; font-size: 14px; }
+
+  #erreur {
+    display: none;
+    text-align: center;
+    padding: 50px 24px;
+    color: #a34a4a;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1 id="titre-doc">Chargement du document...</h1>
+  <p id="sous-titre"></p>
+  <span id="statut-badge" class="badge-attente">En attente</span>
+</header>
+
+<div id="chargement">Chargement du document, veuillez patienter...</div>
+
+<div id="pdf-container"></div>
+
+<div id="zone-signature">
+  <h2>✍️ Signez ci-dessous avec votre doigt</h2>
+  <div id="pad-wrapper">
+    <canvas id="signature-pad"></canvas>
+  </div>
+  <div id="consentement">
+    <input type="checkbox" id="check-consentement">
+    <label for="check-consentement">
+      Je certifie avoir lu ce document et j'accepte de le signer électroniquement.
+      Cette signature a la même valeur juridique qu'une signature manuscrite
+      (Loi N°2013-546 relative aux transactions électroniques, Côte d'Ivoire).
+    </label>
+  </div>
+  <div class="actions">
+    <button id="btn-effacer">Effacer</button>
+    <button id="btn-valider" disabled>Valider ma signature</button>
+  </div>
+</div>
+
+<div id="message-final">
+  <div class="icone">✅</div>
+  <h2>Document signé avec succès</h2>
+  <p>Merci. Une copie signée est conservée par MAPHAR.<br>Vous pouvez fermer cette page.</p>
+</div>
+
+<div id="erreur">
+  <h2>⚠️ Lien invalide ou expiré</h2>
+  <p>Ce lien de signature n'est plus valide. Merci de contacter MAPHAR pour recevoir un nouveau lien.</p>
+</div>
+
+<script>
+// ============================================================
+// CONFIGURATION FIREBASE — à remplacer par tes propres clés
+// (les mêmes que celles utilisées dans MAPHAR Présence)
+// ============================================================
+const firebaseConfig = {
+  apiKey: "TON_API_KEY",
+  authDomain: "TON_PROJET.firebaseapp.com",
+  projectId: "TON_PROJET",
+  storageBucket: "TON_PROJET.appspot.com",
+  messagingSenderId: "TON_SENDER_ID",
+  appId: "TON_APP_ID"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const storage = firebase.storage();
+
+// PDF.js a besoin de savoir où se trouve son "worker" (fichier séparé
+// qui fait le travail de rendu en arrière-plan, sans bloquer la page)
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
+// ============================================================
+// 1. RÉCUPÉRER LE TOKEN DEPUIS L'URL
+// ============================================================
+const params = new URLSearchParams(window.location.search);
+const token = params.get("doc");
+
+let documentRef = null;
+let documentData = null;
+let pdfDoc = null;       // objet PDF.js
+let pdfBytesOriginal = null; // bytes bruts du PDF, réutilisés à l'étape 3
+let pagesLues = false;
+
+if (!token) {
+  afficherErreur();
+} else {
+  chargerDocument(token);
+}
+
+// ============================================================
+// 2. CHERCHER LE DOCUMENT DANS FIRESTORE VIA LE TOKEN
+// ============================================================
+async function chargerDocument(token) {
+  try {
+    const snapshot = await db.collection("documents")
+      .where("lienToken", "==", token)
+      .limit(1)
+      .get();
+
+    if (snapshot.empty) {
+      afficherErreur();
+      return;
+    }
+
+    const docSnap = snapshot.docs[0];
+    documentRef = docSnap.ref;
+    documentData = docSnap.data();
+
+    // Vérifications de sécurité de base
+    if (documentData.statut === "signe") {
+      afficherDejaSigne();
+      return;
+    }
+    if (documentData.statut === "annule") {
+      afficherErreur();
+      return;
+    }
+    const maintenant = new Date();
+    if (documentData.dateExpiration && documentData.dateExpiration.toDate() < maintenant) {
+      afficherErreur();
+      return;
+    }
+
+    // Affichage des infos en-tête
+    document.getElementById("titre-doc").textContent = documentData.titre;
+    document.getElementById("sous-titre").textContent =
+      "À signer par : " + documentData.signataire.nom + " (" + documentData.signataire.fonction + ")";
+
+    await chargerEtAfficherPDF(documentData.pdfOriginalUrl);
+
+  } catch (err) {
+    console.error(err);
+    afficherErreur();
+  }
+}
+
+// ============================================================
+// 3. CHARGER LE PDF DEPUIS FIREBASE STORAGE ET L'AFFICHER AVEC PDF.js
+// ============================================================
+async function chargerEtAfficherPDF(url) {
+  const response = await fetch(url);
+  const arrayBuffer = await response.arrayBuffer();
+  pdfBytesOriginal = arrayBuffer.slice(0); // copie conservée pour l'étape 3
+
+  pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer.slice(0) }).promise;
+
+  document.getElementById("chargement").style.display = "none";
+  const container = document.getElementById("pdf-container");
+
+  // On affiche TOUTES les pages à la suite (scroll vertical),
+  // c'est le plus simple à comprendre pour un signataire non-technique
+  for (let numPage = 1; numPage <= pdfDoc.numPages; numPage++) {
+    const page = await pdfDoc.getPage(numPage);
+    const viewport = page.getViewport({ scale: 1.5 });
+
+    const canvas = document.createElement("canvas");
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    container.appendChild(canvas);
+
+    const ctx = canvas.getContext("2d");
+    await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+  }
+
+  // Une fois toutes les pages rendues, on affiche la zone de signature
+  document.getElementById("zone-signature").style.display = "block";
+  initSignaturePad();
+}
+
+// ============================================================
+// 4. INITIALISER LE PAVÉ DE SIGNATURE (signature_pad)
+// ============================================================
+let pad;
+function initSignaturePad() {
+  const canvas = document.getElementById("signature-pad");
+
+  // Ajuste la résolution du canvas à la taille réelle affichée
+  // (nécessaire pour que le tracé soit net sur mobile, à cause du "devicePixelRatio")
+  function redimensionner() {
+    const ratio = Math.max(window.devicePixelRatio || 1, 1);
+    canvas.width = canvas.offsetWidth * ratio;
+    canvas.height = canvas.offsetHeight * ratio;
+    canvas.getContext("2d").scale(ratio, ratio);
+    if (pad) pad.clear();
+  }
+  window.addEventListener("resize", redimensionner);
+  redimensionner();
+
+  pad = new SignaturePad(canvas, {
+    backgroundColor: "rgba(0,0,0,0)", // fond transparent, important pour la fusion PDF
+    penColor: "rgb(20,40,25)"
+  });
+
+  const checkbox = document.getElementById("check-consentement");
+  const btnValider = document.getElementById("btn-valider");
+
+  function verifierEtatBouton() {
+    btnValider.disabled = pad.isEmpty() || !checkbox.checked;
+  }
+  pad.addEventListener("endStroke", verifierEtatBouton);
+  checkbox.addEventListener("change", verifierEtatBouton);
+
+  document.getElementById("btn-effacer").addEventListener("click", () => {
+    pad.clear();
+    verifierEtatBouton();
+  });
+
+  btnValider.addEventListener("click", validerSignature);
+}
+
+// ============================================================
+// 5. VALIDER : cette fonction sera complétée à l'étape 3
+// (fusion signature + PDF + upload Storage + mise à jour Firestore)
+// ============================================================
+async function validerSignature() {
+  const btnValider = document.getElementById("btn-valider");
+  btnValider.disabled = true;
+  btnValider.textContent = "Enregistrement...";
+
+  // L'image de la signature, fond transparent, format PNG
+  const signatureImageDataUrl = pad.toDataURL("image/png");
+
+  // -> Appel de la fonction de fusion (étape 3)
+  // await fusionnerEtEnregistrer(signatureImageDataUrl, pdfBytesOriginal, documentRef, documentData);
+
+  console.log("Signature capturée, prête pour fusion à l'étape 3.");
+  afficherSucces();
+}
+
+function afficherSucces() {
+  document.getElementById("pdf-container").style.display = "none";
+  document.getElementById("zone-signature").style.display = "none";
+  document.getElementById("message-final").style.display = "block";
+  document.getElementById("statut-badge").textContent = "Signé";
+  document.getElementById("statut-badge").className = "badge-signe";
+}
+
+function afficherDejaSigne() {
+  document.getElementById("chargement").style.display = "none";
+  document.getElementById("message-final").querySelector("h2").textContent = "Ce document a déjà été signé";
+  document.getElementById("message-final").style.display = "block";
+}
+
+function afficherErreur() {
+  document.getElementById("chargement").style.display = "none";
+  document.getElementById("erreur").style.display = "block";
+}
+</script>
+
+</body>
+</html>
