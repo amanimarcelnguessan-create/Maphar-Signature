@@ -3,201 +3,366 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Signature de document - MAPHAR</title>
+<title>Signature électronique — MAPHAR</title>
+<meta name="description" content="Signature électronique sécurisée de documents MAPHAR">
+<meta name="theme-color" content="#4a6b4d">
 
-<!-- PDF.js : affichage du PDF dans le navigateur -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<!-- PDF.js : rendu du PDF dans le navigateur, aucune installation requise -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" defer></script>
 
-<!-- signature_pad : capture de la signature tactile -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/signature_pad/4.1.7/signature_pad.umd.min.js"></script>
-
-<!-- Firebase (compat, plus simple pour débuter) -->
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-storage-compat.js"></script>
+<!-- signature_pad : capture tactile de la signature (souris + doigt) -->
+<script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js" defer></script>
 
 <style>
+  :root {
+    --blanc: #ffffff;
+    --sauge: #7d9a7f;
+    --sauge-clair: #e3ecdf;
+    --sauge-fonce: #4a6b4d;
+    --charbon: #2b2b2b;
+    --charbon-doux: #6b7b6f;
+    --or-champagne: #c9a968;
+    --bordure: #e5e5e0;
+    --alerte: #a34a4a;
+    --alerte-fond: #f7e9e7;
+    --attente-fond: #fdf2d0;
+    --attente-texte: #8a6d1a;
+    --rayon: 12px;
+    --ombre: 0 2px 12px rgba(43, 43, 43, 0.06);
+  }
+
   * { box-sizing: border-box; }
+
   body {
     margin: 0;
-    font-family: -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-    background: #f4f4f2;
-    color: #2b2b2b;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    background: var(--blanc);
+    color: var(--charbon);
+    -webkit-font-smoothing: antialiased;
   }
+
   header {
-    background: #ffffff;
-    padding: 14px 16px;
-    border-bottom: 1px solid #e0e0dc;
+    background: var(--blanc);
+    padding: 18px 20px;
+    border-bottom: 1px solid var(--bordure);
     position: sticky;
     top: 0;
-    z-index: 10;
+    z-index: 20;
+  }
+  .header-marque {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--sauge-fonce);
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+  .header-marque::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--sauge);
   }
   header h1 {
-    font-size: 16px;
-    margin: 0 0 2px 0;
-    color: #2b2b2b;
+    font-size: 17px;
+    margin: 0 0 3px 0;
+    color: var(--charbon);
+    font-weight: 700;
   }
-  header p {
+  header p.sous-titre {
     font-size: 13px;
     margin: 0;
-    color: #6b7b6f;
+    color: var(--charbon-doux);
   }
-  #statut-badge {
-    display: inline-block;
-    margin-top: 6px;
-    padding: 3px 10px;
-    border-radius: 12px;
+  #ordre-info {
     font-size: 12px;
+    color: var(--sauge-fonce);
+    margin-top: 4px;
     font-weight: 600;
   }
-  .badge-attente { background: #fdf2d0; color: #8a6d1a; }
-  .badge-signe { background: #e3ecdf; color: #4a6b4d; }
+  #statut-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-top: 10px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+  }
+  .badge-attente { background: var(--attente-fond); color: var(--attente-texte); }
+  .badge-signe { background: var(--sauge-clair); color: var(--sauge-fonce); }
+
+  main { display: block; }
 
   #pdf-container {
-    padding: 12px;
+    padding: 16px 12px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 12px;
+    gap: 14px;
   }
   #pdf-container canvas {
     width: 100%;
-    max-width: 700px;
-    border: 1px solid #ddd;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    max-width: 720px;
+    border: 1px solid var(--bordure);
+    border-radius: 4px;
+    box-shadow: var(--ombre);
     background: white;
   }
+  .numero-page {
+    font-size: 11px;
+    color: var(--charbon-doux);
+    margin-top: -8px;
+  }
 
+  /* --- Chargement : squelette animé, plus professionnel qu'un simple texte --- */
   #chargement {
+    padding: 24px 16px;
+  }
+  .skeleton {
+    background: linear-gradient(90deg, #f0f0ee 25%, #e8e8e4 37%, #f0f0ee 63%);
+    background-size: 400% 100%;
+    animation: shimmer 1.4s ease infinite;
+    border-radius: 8px;
+    max-width: 720px;
+    margin: 0 auto 14px auto;
+  }
+  .skeleton.page { height: 480px; }
+  @keyframes shimmer {
+    0% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+  #chargement-texte {
     text-align: center;
-    padding: 40px 20px;
-    color: #6b7b6f;
+    color: var(--charbon-doux);
+    font-size: 13px;
+    margin-top: 10px;
   }
 
   #zone-signature {
     display: none;
-    background: white;
-    margin: 16px 12px;
-    padding: 16px;
-    border-radius: 10px;
-    border: 1px solid #e0e0dc;
+    background: var(--blanc);
+    margin: 8px 12px 24px 12px;
+    padding: 20px;
+    border-radius: var(--rayon);
+    border: 1px solid var(--bordure);
+    box-shadow: var(--ombre);
+    max-width: 720px;
+    margin-left: auto;
+    margin-right: auto;
   }
   #zone-signature h2 {
     font-size: 15px;
-    margin: 0 0 10px 0;
-    color: #2b2b2b;
+    margin: 0 0 12px 0;
+    color: var(--charbon);
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
   #pad-wrapper {
-    border: 2px dashed #b9c9bb;
+    border: 2px dashed var(--sauge-clair);
     border-radius: 8px;
     background: #fafaf8;
     touch-action: none;
+    position: relative;
+  }
+  #pad-placeholder {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #b9c2ba;
+    font-size: 13px;
+    pointer-events: none;
   }
   #signature-pad {
     width: 100%;
     height: 180px;
     touch-action: none;
+    display: block;
   }
   .actions {
     display: flex;
     gap: 10px;
-    margin-top: 12px;
+    margin-top: 14px;
   }
   button {
     flex: 1;
-    padding: 12px;
+    padding: 13px;
     border: none;
     border-radius: 8px;
     font-size: 14px;
-    font-weight: 600;
+    font-weight: 700;
     cursor: pointer;
+    transition: opacity 0.15s ease, transform 0.1s ease;
+    font-family: inherit;
   }
+  button:active:not(:disabled) { transform: scale(0.98); }
   #btn-effacer {
-    background: #eee;
-    color: #555;
+    background: #eeefec;
+    color: var(--charbon-doux);
   }
   #btn-valider {
-    background: #4a6b4d;
+    background: var(--sauge-fonce);
     color: white;
   }
   #btn-valider:disabled {
-    background: #c9d3ca;
+    background: #d4dbd5;
     cursor: not-allowed;
   }
   #consentement {
     display: flex;
     align-items: flex-start;
-    gap: 8px;
-    margin-top: 14px;
+    gap: 9px;
+    margin-top: 16px;
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--charbon-doux);
+  }
+  #consentement input {
+    margin-top: 3px;
+    accent-color: var(--sauge-fonce);
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+  }
+
+  .ecran-message {
+    display: none;
+    text-align: center;
+    padding: 60px 24px;
+    max-width: 480px;
+    margin: 0 auto;
+  }
+  .ecran-message .icone {
+    font-size: 44px;
+    margin-bottom: 14px;
+  }
+  .ecran-message h2 {
+    margin-bottom: 8px;
+    font-size: 18px;
+  }
+  .ecran-message p {
+    color: var(--charbon-doux);
+    font-size: 14px;
+    line-height: 1.6;
+  }
+  #message-final h2 { color: var(--sauge-fonce); }
+  #attente-tour h2 { color: var(--attente-texte); }
+  #erreur h2 { color: var(--alerte); }
+
+  #toast {
+    position: fixed;
+    left: 16px;
+    right: 16px;
+    bottom: 16px;
+    background: var(--alerte-fond);
+    color: var(--alerte);
+    padding: 12px 16px;
+    border-radius: 8px;
     font-size: 13px;
-    color: #555;
-  }
-  #consentement input { margin-top: 3px; }
-
-  #message-final {
     display: none;
-    text-align: center;
-    padding: 50px 24px;
+    z-index: 50;
+    box-shadow: var(--ombre);
   }
-  #message-final .icone { font-size: 48px; margin-bottom: 12px; }
-  #message-final h2 { color: #4a6b4d; margin-bottom: 8px; }
-  #message-final p { color: #6b7b6f; font-size: 14px; }
 
-  #erreur {
-    display: none;
+  .visually-hidden {
+    position: absolute;
+    width: 1px; height: 1px;
+    overflow: hidden;
+    clip: rect(0,0,0,0);
+  }
+
+  footer.pied {
     text-align: center;
-    padding: 50px 24px;
-    color: #a34a4a;
+    padding: 20px;
+    font-size: 11px;
+    color: #b9c2ba;
   }
 </style>
 </head>
 <body>
 
 <header>
-  <h1 id="titre-doc">Chargement du document...</h1>
-  <p id="sous-titre"></p>
-  <span id="statut-badge" class="badge-attente">En attente</span>
+  <div class="header-marque">MAPHAR · Signature électronique sécurisée</div>
+  <h1 id="titre-doc">Chargement du document…</h1>
+  <p class="sous-titre" id="sous-titre"></p>
+  <p id="ordre-info"></p>
+  <span id="statut-badge" class="badge-attente" role="status">En attente</span>
 </header>
 
-<div id="chargement">Chargement du document, veuillez patienter...</div>
-
-<div id="pdf-container"></div>
-
-<div id="zone-signature">
-  <h2>✍️ Signez ci-dessous avec votre doigt</h2>
-  <div id="pad-wrapper">
-    <canvas id="signature-pad"></canvas>
+<main>
+  <div id="chargement" aria-live="polite">
+    <div class="skeleton page"></div>
+    <p id="chargement-texte">Chargement sécurisé du document…</p>
   </div>
-  <div id="consentement">
-    <input type="checkbox" id="check-consentement">
-    <label for="check-consentement">
-      Je certifie avoir lu ce document et j'accepte de le signer électroniquement.
-      Cette signature a la même valeur juridique qu'une signature manuscrite
-      (Loi N°2013-546 relative aux transactions électroniques, Côte d'Ivoire).
-    </label>
+
+  <div id="pdf-container"></div>
+
+  <section id="zone-signature" aria-label="Zone de signature">
+    <h2>✍️ Votre signature</h2>
+    <div id="pad-wrapper">
+      <span id="pad-placeholder">Signez ici avec votre doigt</span>
+      <canvas id="signature-pad"></canvas>
+    </div>
+    <div id="consentement">
+      <input type="checkbox" id="check-consentement" aria-describedby="texte-consentement">
+      <label for="check-consentement" id="texte-consentement">
+        Je certifie avoir lu ce document et j'accepte de le signer électroniquement.
+        Cette signature a la même valeur juridique qu'une signature manuscrite
+        (Loi N°2013-546 relative aux transactions électroniques, Côte d'Ivoire).
+      </label>
+    </div>
+    <div class="actions">
+      <button id="btn-effacer" type="button">Effacer</button>
+      <button id="btn-valider" type="button" disabled>Valider ma signature</button>
+    </div>
+  </section>
+
+  <div id="attente-tour" class="ecran-message">
+    <div class="icone">⏳</div>
+    <h2>Pas encore votre tour</h2>
+    <p id="attente-tour-texte"></p>
   </div>
-  <div class="actions">
-    <button id="btn-effacer">Effacer</button>
-    <button id="btn-valider" disabled>Valider ma signature</button>
+
+  <div id="message-final" class="ecran-message">
+    <div class="icone">✅</div>
+    <h2 id="message-final-titre">Document signé avec succès</h2>
+    <p>Merci. Une copie signée est conservée par MAPHAR.<br>Vous pouvez fermer cette page en toute sécurité.</p>
   </div>
-</div>
 
-<div id="message-final">
-  <div class="icone">✅</div>
-  <h2>Document signé avec succès</h2>
-  <p>Merci. Une copie signée est conservée par MAPHAR.<br>Vous pouvez fermer cette page.</p>
-</div>
+  <div id="erreur" class="ecran-message">
+    <div class="icone">⚠️</div>
+    <h2>Lien invalide ou expiré</h2>
+    <p id="erreur-texte">Ce lien de signature n'est plus valide. Merci de contacter MAPHAR pour recevoir un nouveau lien.</p>
+  </div>
+</main>
 
-<div id="erreur">
-  <h2>⚠️ Lien invalide ou expiré</h2>
-  <p>Ce lien de signature n'est plus valide. Merci de contacter MAPHAR pour recevoir un nouveau lien.</p>
-</div>
+<div id="toast" role="alert"></div>
 
-<script>
+<footer class="pied">MAPHAR — Mutuelle Pour l'Assurance des Pharmaciens</footer>
+
+<script type="module">
 // ============================================================
-// CONFIGURATION FIREBASE — à remplacer par tes propres clés
-// (les mêmes que celles utilisées dans MAPHAR Présence)
+// FIREBASE v9 (modulaire) — chargé via ES modules directement
+// depuis le CDN officiel. Pas de build, pas de npm install :
+// le navigateur importe uniquement les fonctions dont on a besoin
+// (plus léger et plus rapide que l'ancien SDK "compat").
 // ============================================================
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {
+  getFirestore, collection, query, where, getDocs, limit
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { getStorage } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
+
+// -- À remplacer par tes vraies clés --
 const firebaseConfig = {
   apiKey: "TON_API_KEY",
   authDomain: "TON_PROJET.firebaseapp.com",
@@ -206,148 +371,214 @@ const firebaseConfig = {
   messagingSenderId: "TON_SENDER_ID",
   appId: "TON_APP_ID"
 };
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
-const storage = firebase.storage();
 
-// PDF.js a besoin de savoir où se trouve son "worker" (fichier séparé
-// qui fait le travail de rendu en arrière-plan, sans bloquer la page)
-pdfjsLib.GlobalWorkerOptions.workerSrc =
-  "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+const app = initializeApp(firebaseConfig);
+const db = getStorage ? getFirestore(app) : null;
+const storage = getStorage(app);
 
 // ============================================================
-// 1. RÉCUPÉRER LE TOKEN DEPUIS L'URL
+// ÉTAT DE L'APPLICATION
 // ============================================================
-const params = new URLSearchParams(window.location.search);
-const token = params.get("doc");
+const etat = {
+  token: new URLSearchParams(window.location.search).get("doc"),
+  documentRef: null,
+  documentData: null,
+  signataireCourant: null,
+  pdfDoc: null,
+  pdfBytesOriginal: null,
+  pad: null
+};
 
-let documentRef = null;
-let documentData = null;
-let pdfDoc = null;       // objet PDF.js
-let pdfBytesOriginal = null; // bytes bruts du PDF, réutilisés à l'étape 3
-let pagesLues = false;
+const el = (id) => document.getElementById(id);
 
-if (!token) {
-  afficherErreur();
-} else {
-  chargerDocument(token);
+// ============================================================
+// UTILITAIRES UI
+// ============================================================
+function afficherToast(message) {
+  const toast = el("toast");
+  toast.textContent = message;
+  toast.style.display = "block";
+  setTimeout(() => { toast.style.display = "none"; }, 4000);
+}
+
+function basculerEcran(idAAfficher) {
+  ["chargement", "pdf-container", "zone-signature", "attente-tour", "message-final", "erreur"]
+    .forEach(id => {
+      const node = el(id);
+      if (!node) return;
+      node.style.display = (id === idAAfficher) ? "" : "none";
+    });
+}
+
+function afficherErreur(texte) {
+  if (texte) el("erreur-texte").textContent = texte;
+  basculerEcran("erreur");
 }
 
 // ============================================================
-// 2. CHERCHER LE DOCUMENT DANS FIRESTORE VIA LE TOKEN
+// DÉMARRAGE
 // ============================================================
-async function chargerDocument(token) {
+window.addEventListener("DOMContentLoaded", demarrer);
+
+async function demarrer() {
+  if (!navigator.onLine) {
+    afficherErreur("Aucune connexion internet détectée. Vérifiez votre connexion puis rechargez la page.");
+    return;
+  }
+  if (!etat.token) {
+    afficherErreur("Le lien utilisé est incomplet. Merci de redemander le lien à MAPHAR.");
+    return;
+  }
   try {
-    const snapshot = await db.collection("documents")
-      .where("lienToken", "==", token)
-      .limit(1)
-      .get();
-
-    if (snapshot.empty) {
-      afficherErreur();
-      return;
-    }
-
-    const docSnap = snapshot.docs[0];
-    documentRef = docSnap.ref;
-    documentData = docSnap.data();
-
-    // Vérifications de sécurité de base
-    if (documentData.statut === "signe") {
-      afficherDejaSigne();
-      return;
-    }
-    if (documentData.statut === "annule") {
-      afficherErreur();
-      return;
-    }
-    const maintenant = new Date();
-    if (documentData.dateExpiration && documentData.dateExpiration.toDate() < maintenant) {
-      afficherErreur();
-      return;
-    }
-
-    // Affichage des infos en-tête
-    document.getElementById("titre-doc").textContent = documentData.titre;
-    document.getElementById("sous-titre").textContent =
-      "À signer par : " + documentData.signataire.nom + " (" + documentData.signataire.fonction + ")";
-
-    await chargerEtAfficherPDF(documentData.pdfOriginalUrl);
-
+    await chargerDocument(etat.token);
   } catch (err) {
     console.error(err);
-    afficherErreur();
+    afficherErreur("Une erreur inattendue est survenue lors du chargement. Réessayez dans un instant.");
   }
 }
 
 // ============================================================
-// 3. CHARGER LE PDF DEPUIS FIREBASE STORAGE ET L'AFFICHER AVEC PDF.js
+// 1. RECHERCHE DU DOCUMENT VIA LE TOKEN
+// ============================================================
+// Firestore ne permet pas de chercher un champ à l'intérieur d'un
+// élément de tableau. On maintient donc "tousLesTokens" (liste à plat)
+// pour la recherche, puis on retrouve le bon signataire côté client.
+async function chargerDocument(token) {
+  const documentsRef = collection(db, "documents");
+  const q = query(documentsRef, where("tousLesTokens", "array-contains", token), limit(1));
+  const snapshot = await getDocs(q);
+
+  if (snapshot.empty) {
+    afficherErreur();
+    return;
+  }
+
+  const docSnap = snapshot.docs[0];
+  etat.documentRef = docSnap.ref;
+  etat.documentData = docSnap.data();
+  etat.signataireCourant = etat.documentData.signataires.find(s => s.lienToken === token);
+
+  if (!etat.signataireCourant) {
+    afficherErreur();
+    return;
+  }
+  if (etat.documentData.statutGlobal === "annule") {
+    afficherErreur("Ce document a été annulé par MAPHAR.");
+    return;
+  }
+  const maintenant = new Date();
+  if (etat.documentData.dateExpiration && etat.documentData.dateExpiration.toDate() < maintenant) {
+    afficherErreur("Ce lien de signature a expiré. Merci de contacter MAPHAR pour un nouveau lien.");
+    return;
+  }
+  if (etat.signataireCourant.statut === "signe") {
+    afficherDejaSigne();
+    return;
+  }
+
+  const enAttenteAvant = etat.documentData.signataires
+    .filter(s => s.ordre < etat.signataireCourant.ordre && s.statut !== "signe");
+  if (enAttenteAvant.length > 0) {
+    afficherAttenteTour(enAttenteAvant.map(s => s.nom).join(", "));
+    return;
+  }
+
+  remplirEnTete();
+  const urlPdf = etat.documentData.pdfActuelUrl || etat.documentData.pdfOriginalUrl;
+  await chargerEtAfficherPDF(urlPdf);
+}
+
+function remplirEnTete() {
+  el("titre-doc").textContent = etat.documentData.titre;
+  el("sous-titre").textContent =
+    "À signer par : " + etat.signataireCourant.nom + " (" + etat.signataireCourant.fonction + ")";
+
+  const total = etat.documentData.signataires.length;
+  if (total > 1) {
+    el("ordre-info").textContent = "Signature " + etat.signataireCourant.ordre + " sur " + total;
+  }
+}
+
+// ============================================================
+// 2. AFFICHAGE DU PDF (PDF.js)
 // ============================================================
 async function chargerEtAfficherPDF(url) {
-  const response = await fetch(url);
-  const arrayBuffer = await response.arrayBuffer();
-  pdfBytesOriginal = arrayBuffer.slice(0); // copie conservée pour l'étape 3
+  const reponse = await fetch(url);
+  if (!reponse.ok) throw new Error("Échec du téléchargement du PDF");
 
-  pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer.slice(0) }).promise;
+  const arrayBuffer = await reponse.arrayBuffer();
+  etat.pdfBytesOriginal = arrayBuffer.slice(0);
 
-  document.getElementById("chargement").style.display = "none";
-  const container = document.getElementById("pdf-container");
+  window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+    "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 
-  // On affiche TOUTES les pages à la suite (scroll vertical),
-  // c'est le plus simple à comprendre pour un signataire non-technique
-  for (let numPage = 1; numPage <= pdfDoc.numPages; numPage++) {
-    const page = await pdfDoc.getPage(numPage);
+  etat.pdfDoc = await window.pdfjsLib.getDocument({ data: arrayBuffer.slice(0) }).promise;
+
+  const container = el("pdf-container");
+  container.innerHTML = "";
+
+  // Chaque page gère sa propre orientation (portrait/paysage) nativement
+  for (let numPage = 1; numPage <= etat.pdfDoc.numPages; numPage++) {
+    const page = await etat.pdfDoc.getPage(numPage);
     const viewport = page.getViewport({ scale: 1.5 });
 
     const canvas = document.createElement("canvas");
     canvas.width = viewport.width;
     canvas.height = viewport.height;
+    canvas.setAttribute("role", "img");
+    canvas.setAttribute("aria-label", "Page " + numPage + " du document");
     container.appendChild(canvas);
 
+    const legende = document.createElement("span");
+    legende.className = "numero-page";
+    legende.textContent = "Page " + numPage + " / " + etat.pdfDoc.numPages;
+    container.appendChild(legende);
+
     const ctx = canvas.getContext("2d");
-    await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+    await page.render({ canvasContext: ctx, viewport }).promise;
   }
 
-  // Une fois toutes les pages rendues, on affiche la zone de signature
-  document.getElementById("zone-signature").style.display = "block";
+  basculerEcran("pdf-container");
+  el("zone-signature").style.display = "block";
   initSignaturePad();
 }
 
 // ============================================================
-// 4. INITIALISER LE PAVÉ DE SIGNATURE (signature_pad)
+// 3. PAVÉ DE SIGNATURE
 // ============================================================
-let pad;
 function initSignaturePad() {
-  const canvas = document.getElementById("signature-pad");
+  const canvas = el("signature-pad");
+  const placeholder = el("pad-placeholder");
 
-  // Ajuste la résolution du canvas à la taille réelle affichée
-  // (nécessaire pour que le tracé soit net sur mobile, à cause du "devicePixelRatio")
   function redimensionner() {
     const ratio = Math.max(window.devicePixelRatio || 1, 1);
     canvas.width = canvas.offsetWidth * ratio;
     canvas.height = canvas.offsetHeight * ratio;
     canvas.getContext("2d").scale(ratio, ratio);
-    if (pad) pad.clear();
+    if (etat.pad) etat.pad.clear();
   }
   window.addEventListener("resize", redimensionner);
   redimensionner();
 
-  pad = new SignaturePad(canvas, {
-    backgroundColor: "rgba(0,0,0,0)", // fond transparent, important pour la fusion PDF
+  etat.pad = new window.SignaturePad(canvas, {
+    backgroundColor: "rgba(0,0,0,0)",
     penColor: "rgb(20,40,25)"
   });
 
-  const checkbox = document.getElementById("check-consentement");
-  const btnValider = document.getElementById("btn-valider");
+  const checkbox = el("check-consentement");
+  const btnValider = el("btn-valider");
 
   function verifierEtatBouton() {
-    btnValider.disabled = pad.isEmpty() || !checkbox.checked;
+    const vide = etat.pad.isEmpty();
+    placeholder.style.display = vide ? "flex" : "none";
+    btnValider.disabled = vide || !checkbox.checked;
   }
-  pad.addEventListener("endStroke", verifierEtatBouton);
+  etat.pad.addEventListener("beginStroke", () => { placeholder.style.display = "none"; });
+  etat.pad.addEventListener("endStroke", verifierEtatBouton);
   checkbox.addEventListener("change", verifierEtatBouton);
 
-  document.getElementById("btn-effacer").addEventListener("click", () => {
-    pad.clear();
+  el("btn-effacer").addEventListener("click", () => {
+    etat.pad.clear();
     verifierEtatBouton();
   });
 
@@ -355,41 +586,48 @@ function initSignaturePad() {
 }
 
 // ============================================================
-// 5. VALIDER : cette fonction sera complétée à l'étape 3
-// (fusion signature + PDF + upload Storage + mise à jour Firestore)
+// 4. VALIDATION — la fusion PDF + upload seront ajoutés à l'étape 3
 // ============================================================
 async function validerSignature() {
-  const btnValider = document.getElementById("btn-valider");
+  const btnValider = el("btn-valider");
   btnValider.disabled = true;
-  btnValider.textContent = "Enregistrement...";
+  btnValider.textContent = "Enregistrement…";
 
-  // L'image de la signature, fond transparent, format PNG
-  const signatureImageDataUrl = pad.toDataURL("image/png");
+  try {
+    const signatureImageDataUrl = etat.pad.toDataURL("image/png");
 
-  // -> Appel de la fonction de fusion (étape 3)
-  // await fusionnerEtEnregistrer(signatureImageDataUrl, pdfBytesOriginal, documentRef, documentData);
+    // -> Étape 3 : fusionnerEtEnregistrer(signatureImageDataUrl, etat)
 
-  console.log("Signature capturée, prête pour fusion à l'étape 3.");
-  afficherSucces();
+    console.log("Signature capturée pour", etat.signataireCourant.nom);
+    afficherSucces();
+  } catch (err) {
+    console.error(err);
+    afficherToast("Échec de l'enregistrement. Vérifiez votre connexion et réessayez.");
+    btnValider.disabled = false;
+    btnValider.textContent = "Valider ma signature";
+  }
 }
 
+// ============================================================
+// ÉCRANS DE FIN
+// ============================================================
 function afficherSucces() {
-  document.getElementById("pdf-container").style.display = "none";
-  document.getElementById("zone-signature").style.display = "none";
-  document.getElementById("message-final").style.display = "block";
-  document.getElementById("statut-badge").textContent = "Signé";
-  document.getElementById("statut-badge").className = "badge-signe";
+  basculerEcran("message-final");
+  el("statut-badge").textContent = "Signé";
+  el("statut-badge").className = "badge-signe";
 }
 
 function afficherDejaSigne() {
-  document.getElementById("chargement").style.display = "none";
-  document.getElementById("message-final").querySelector("h2").textContent = "Ce document a déjà été signé";
-  document.getElementById("message-final").style.display = "block";
+  el("message-final-titre").textContent = "Vous avez déjà signé ce document";
+  basculerEcran("message-final");
+  el("statut-badge").textContent = "Signé";
+  el("statut-badge").className = "badge-signe";
 }
 
-function afficherErreur() {
-  document.getElementById("chargement").style.display = "none";
-  document.getElementById("erreur").style.display = "block";
+function afficherAttenteTour(nomsEnAttente) {
+  el("attente-tour-texte").textContent =
+    "Ce document doit d'abord être signé par : " + nomsEnAttente + ". Vous serez notifié quand ce sera votre tour.";
+  basculerEcran("attente-tour");
 }
 </script>
 
