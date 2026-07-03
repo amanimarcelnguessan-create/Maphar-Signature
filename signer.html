@@ -390,7 +390,7 @@ import {
   getFirestore, collection, query, where, getDocs, limit,
   updateDoc, addDoc, Timestamp
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { PDFDocument } from "https://unpkg.com/[email protected]/dist/pdf-lib.esm.min.js";
+import { PDFDocument } from "https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.esm.min.js";
 // Pas de Firebase Storage : le PDF est stocké directement dans Firestore
 // (encodé en base64), pour rester sur le forfait 100% gratuit "Spark".
 // pdf-lib sert à fusionner l'image de signature DANS le PDF existant.

@@ -42,7 +42,23 @@
     font-weight: 700;
     margin-bottom: 6px;
   }
+  .header-ligne {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+  }
   header h1 { font-size: 18px; margin: 0; }
+  .lien-nav {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--sauge-fonce);
+    text-decoration: none;
+    background: var(--sauge-clair);
+    padding: 8px 12px;
+    border-radius: 8px;
+    white-space: nowrap;
+  }
 
   main { max-width: 640px; margin: 0 auto; padding: 16px; }
 
@@ -211,7 +227,10 @@
 
 <header>
   <div class="header-marque">MAPHAR · Signature électronique</div>
-  <h1>Nouveau document à signer</h1>
+  <div class="header-ligne">
+    <h1>Nouveau document à signer</h1>
+    <a class="lien-nav" href="tableau-de-bord.html">📋 Tableau de bord</a>
+  </div>
 </header>
 
 <main>
@@ -248,8 +267,12 @@
     <h2>✅ Document créé</h2>
     <p style="font-size:13px; color:var(--charbon-doux);">
       Envoie à chaque signataire son lien personnel par WhatsApp ou email.
+      Les liens restent valides <strong>14 jours</strong>.
     </p>
     <div id="liste-liens"></div>
+    <a href="tableau-de-bord.html" class="lien-nav" style="display:inline-block; margin-top:14px;">
+      → Voir dans le tableau de bord
+    </a>
   </div>
 </main>
 

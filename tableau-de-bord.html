@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Tableau de bord — MAPHAR Signature</title>
+<meta name="theme-color" content="#4a6b4d">
+
+<style>
+  :root {
+    --blanc: #ffffff;
+    --sauge: #7d9a7f;
+    --sauge-clair: #e3ecdf;
+    --sauge-fonce: #4a6b4d;
+    --charbon: #2b2b2b;
+    --charbon-doux: #6b7b6f;
+    --or-champagne: #c9a968;
+    --bordure: #e5e5e0;
+    --alerte: #a34a4a;
+    --alerte-fond: #f7e9e7;
+    --attente-fond: #fdf2d0;
+    --attente-texte: #8a6d1a;
+    --rayon: 12px;
+    --ombre: 0 2px 12px rgba(43, 43, 43, 0.06);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    background: #f4f4f2;
+    color: var(--charbon);
+    padding-bottom: 40px;
+  }
+  header {
+    background: var(--blanc);
+    padding: 18px 20px;
+    border-bottom: 1px solid var(--bordure);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  .header-marque {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--sauge-fonce);
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .header-ligne {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+  }
+  header h1 { font-size: 18px; margin: 0; }
+  .lien-nav {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--sauge-fonce);
+    text-decoration: none;
+    background: var(--sauge-clair);
+    padding: 8px 12px;
+    border-radius: 8px;
+    white-space: nowrap;
+  }
+
+  main { max-width: 720px; margin: 0 auto; padding: 16px; }
+
+  .barre-filtres {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    overflow-x: auto;
+  }
+  .filtre {
+    padding: 8px 14px;
+    border-radius: 20px;
+    font-size: 12.5px;
+    font-weight: 700;
+    background: var(--blanc);
+    border: 1px solid var(--bordure);
+    color: var(--charbon-doux);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .filtre.actif {
+    background: var(--sauge-fonce);
+    color: white;
+    border-color: var(--sauge-fonce);
+  }
+
+  .carte-doc {
+    background: var(--blanc);
+    border: 1px solid var(--bordure);
+    border-radius: var(--rayon);
+    box-shadow: var(--ombre);
+    padding: 18px;
+    margin-bottom: 14px;
+  }
+  .carte-doc .ligne-titre {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 4px;
+  }
+  .carte-doc h3 { font-size: 15.5px; margin: 0; }
+  .badge {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 12px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .badge-attente { background: var(--attente-fond); color: var(--attente-texte); }
+  .badge-signe { background: var(--sauge-clair); color: var(--sauge-fonce); }
+  .badge-annule { background: var(--alerte-fond); color: var(--alerte); }
+
+  .meta-doc {
+    font-size: 12px;
+    color: var(--charbon-doux);
+    margin-bottom: 12px;
+  }
+
+  .liste-signataires { margin: 10px 0; }
+  .ligne-signataire {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    border-top: 1px solid #f0f0ed;
+    font-size: 13px;
+  }
+  .ligne-signataire:first-child { border-top: none; }
+  .ligne-signataire .nom { font-weight: 600; }
+  .ligne-signataire .fonction { color: var(--charbon-doux); font-size: 11.5px; }
+  .puce-statut {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 10px;
+  }
+  .puce-attente { background: var(--attente-fond); color: var(--attente-texte); }
+  .puce-signe { background: var(--sauge-clair); color: var(--sauge-fonce); }
+
+  .actions-doc {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    flex-wrap: wrap;
+  }
+  .btn-action {
+    flex: 1;
+    min-width: 140px;
+    padding: 10px;
+    border-radius: 8px;
+    border: none;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    text-align: center;
+  }
+  .btn-telecharger { background: var(--sauge-fonce); color: white; }
+  .btn-copier-lien { background: #eeefec; color: var(--charbon-doux); }
+  .btn-annuler { background: var(--alerte-fond); color: var(--alerte); }
+
+  .liens-en-attente {
+    margin-top: 10px;
+    font-size: 12px;
+  }
+  .liens-en-attente summary {
+    cursor: pointer;
+    color: var(--sauge-fonce);
+    font-weight: 700;
+  }
+  .lien-copie-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+    gap: 8px;
+  }
+  .lien-copie-item button {
+    background: var(--sauge-clair);
+    color: var(--sauge-fonce);
+    border: none;
+    padding: 5px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  .skeleton {
+    background: linear-gradient(90deg, #f0f0ee 25%, #e8e8e4 37%, #f0f0ee 63%);
+    background-size: 400% 100%;
+    animation: shimmer 1.4s ease infinite;
+    border-radius: var(--rayon);
+    height: 100px;
+    margin-bottom: 14px;
+  }
+  @keyframes shimmer {
+    0% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+
+  #etat-vide {
+    display: none;
+    text-align: center;
+    padding: 60px 24px;
+    color: var(--charbon-doux);
+  }
+  #etat-vide .icone { font-size: 40px; margin-bottom: 12px; }
+
+  #toast {
+    position: fixed;
+    left: 16px; right: 16px; bottom: 16px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    display: none;
+    z-index: 50;
+    box-shadow: var(--ombre);
+    background: var(--sauge-clair);
+    color: var(--sauge-fonce);
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-marque">MAPHAR · Signature électronique</div>
+  <div class="header-ligne">
+    <h1>Tableau de bord</h1>
+    <a class="lien-nav" href="creer-document.html">+ Nouveau document</a>
+  </div>
+</header>
+
+<main>
+  <div class="barre-filtres">
+    <button class="filtre actif" data-filtre="tous">Tous</button>
+    <button class="filtre" data-filtre="en_attente">En attente</button>
+    <button class="filtre" data-filtre="signe">Signés</button>
+    <button class="filtre" data-filtre="annule">Annulés</button>
+  </div>
+
+  <div id="conteneur-liste">
+    <div class="skeleton"></div>
+    <div class="skeleton"></div>
+    <div class="skeleton"></div>
+  </div>
+
+  <div id="etat-vide">
+    <div class="icone">📄</div>
+    <p>Aucun document dans cette catégorie.</p>
+  </div>
+</main>
+
+<div id="toast"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {
+  getFirestore, collection, getDocs, query, orderBy, doc, updateDoc
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDtJcMwK__98-v2Jz2sn5NYxe3X_pggOJU",
+  authDomain: "maphar-signature.firebaseapp.com",
+  projectId: "maphar-signature",
+  storageBucket: "maphar-signature.firebasestorage.app",
+  messagingSenderId: "358074386051",
+  appId: "1:358074386051:web:4853079df71268ae2bfdb6"
+};
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+// ⚠️ À adapter si ton dépôt GitHub Pages a une URL différente
+const BASE_URL_SIGNATURE = "https://amanimarcelnguessan-create.github.io/Maphar-Signature/signer.html";
+
+const el = (id) => document.getElementById(id);
+let tousLesDocuments = [];
+let filtreActif = "tous";
+
+function base64VersArrayBuffer(base64) {
+  const chaineBinaire = atob(base64);
+  const octets = new Uint8Array(chaineBinaire.length);
+  for (let i = 0; i < chaineBinaire.length; i++) {
+    octets[i] = chaineBinaire.charCodeAt(i);
+  }
+  return octets.buffer;
+}
+
+function formaterDate(timestamp) {
+  if (!timestamp) return "—";
+  const d = timestamp.toDate();
+  return d.toLocaleDateString("fr-FR", { day: "2-digit", month: "short", year: "numeric" }) +
+    " à " + d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+}
+
+// ============================================================
+// CHARGEMENT DES DOCUMENTS
+// ============================================================
+async function chargerDocuments() {
+  try {
+    const q = query(collection(db, "documents"), orderBy("dateCreation", "desc"));
+    const snapshot = await getDocs(q);
+    tousLesDocuments = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+    afficherListe();
+  } catch (err) {
+    console.error(err);
+    el("conteneur-liste").innerHTML =
+      "<p style='text-align:center; color:var(--alerte); padding:30px;'>Erreur de chargement. Vérifie ta connexion et recharge la page.</p>";
+  }
+}
+
+// ============================================================
+// AFFICHAGE (avec filtre actif)
+// ============================================================
+function afficherListe() {
+  const conteneur = el("conteneur-liste");
+  conteneur.innerHTML = "";
+
+  const documentsFiltres = filtreActif === "tous"
+    ? tousLesDocuments
+    : tousLesDocuments.filter(d => d.statutGlobal === filtreActif);
+
+  if (documentsFiltres.length === 0) {
+    el("etat-vide").style.display = "block";
+    return;
+  }
+  el("etat-vide").style.display = "none";
+
+  documentsFiltres.forEach(docData => conteneur.appendChild(construireCarte(docData)));
+}
+
+function construireCarte(d) {
+  const carte = document.createElement("div");
+  carte.className = "carte-doc";
+
+  const classesBadge = { en_attente: "badge-attente", signe: "badge-signe", annule: "badge-annule" };
+  const libellesBadge = { en_attente: "En attente", signe: "Signé", annule: "Annulé" };
+
+  const nbSignes = d.signataires.filter(s => s.statut === "signe").length;
+  const nbTotal = d.signataires.length;
+
+  carte.innerHTML = `
+    <div class="ligne-titre">
+      <h3>${d.titre}</h3>
+      <span class="badge ${classesBadge[d.statutGlobal] || 'badge-attente'}">${libellesBadge[d.statutGlobal] || d.statutGlobal}</span>
+    </div>
+    <div class="meta-doc">
+      ${libelleType(d.type)} · Créé le ${formaterDate(d.dateCreation)} · ${nbSignes}/${nbTotal} signature(s)
+    </div>
+    <div class="liste-signataires"></div>
+  `;
+
+  const listeSign = carte.querySelector(".liste-signataires");
+  d.signataires.slice().sort((a, b) => a.ordre - b.ordre).forEach(s => {
+    const ligne = document.createElement("div");
+    ligne.className = "ligne-signataire";
+    ligne.innerHTML = `
+      <div>
+        <div class="nom">${s.nom}</div>
+        <div class="fonction">${s.fonction}</div>
+      </div>
+      <span class="puce-statut ${s.statut === 'signe' ? 'puce-signe' : 'puce-attente'}">
+        ${s.statut === 'signe' ? '✓ Signé le ' + formaterDate(s.dateSignature) : '⏳ En attente'}
+      </span>
+    `;
+    listeSign.appendChild(ligne);
+  });
+
+  // Liens à copier pour les signataires pas encore signés
+  const enAttente = d.signataires.filter(s => s.statut !== "signe");
+  if (enAttente.length > 0 && d.statutGlobal !== "annule") {
+    const details = document.createElement("details");
+    details.className = "liens-en-attente";
+    details.innerHTML = `<summary>Copier les liens en attente (${enAttente.length})</summary>`;
+    enAttente.forEach(s => {
+      const lien = BASE_URL_SIGNATURE + "?doc=" + s.lienToken;
+      const item = document.createElement("div");
+      item.className = "lien-copie-item";
+      item.innerHTML = `<span>${s.nom}</span><button type="button">Copier</button>`;
+      item.querySelector("button").addEventListener("click", () => {
+        navigator.clipboard.writeText(lien);
+        afficherToast("Lien copié pour " + s.nom);
+      });
+      details.appendChild(item);
+    });
+    carte.appendChild(details);
+  }
+
+  // Actions
+  const actions = document.createElement("div");
+  actions.className = "actions-doc";
+
+  if (d.statutGlobal === "signe" && d.pdfActuelBase64) {
+    const btnDl = document.createElement("button");
+    btnDl.className = "btn-action btn-telecharger";
+    btnDl.type = "button";
+    btnDl.textContent = "⬇ Télécharger le PDF signé";
+    btnDl.addEventListener("click", () => telechargerPdf(d.pdfActuelBase64, d.titre));
+    actions.appendChild(btnDl);
+  }
+
+  if (d.statutGlobal !== "annule" && d.statutGlobal !== "signe") {
+    const btnAnnuler = document.createElement("button");
+    btnAnnuler.className = "btn-action btn-annuler";
+    btnAnnuler.type = "button";
+    btnAnnuler.textContent = "Annuler ce document";
+    btnAnnuler.addEventListener("click", () => annulerDocument(d.id, carte));
+    actions.appendChild(btnAnnuler);
+  }
+
+  if (actions.children.length > 0) carte.appendChild(actions);
+
+  return carte;
+}
+
+function libelleType(type) {
+  return { pv: "Procès-verbal", compte_rendu: "Compte rendu", courrier: "Courrier" }[type] || type;
+}
+
+// ============================================================
+// TÉLÉCHARGER LE PDF FINAL
+// ============================================================
+function telechargerPdf(base64, titre) {
+  const buffer = base64VersArrayBuffer(base64);
+  const blob = new Blob([buffer], { type: "application/pdf" });
+  const url = URL.createObjectURL(blob);
+  const lien = document.createElement("a");
+  lien.href = url;
+  lien.download = titre.replace(/[^a-z0-9]/gi, "_") + ".pdf";
+  document.body.appendChild(lien);
+  lien.click();
+  lien.remove();
+  URL.revokeObjectURL(url);
+}
+
+// ============================================================
+// ANNULER UN DOCUMENT
+// ============================================================
+async function annulerDocument(docId, carteElement) {
+  const confirmation = confirm("Annuler définitivement ce document ? Les liens de signature ne fonctionneront plus.");
+  if (!confirmation) return;
+
+  try {
+    await updateDoc(doc(db, "documents", docId), { statutGlobal: "annule" });
+    afficherToast("Document annulé.");
+    await chargerDocuments();
+  } catch (err) {
+    console.error(err);
+    afficherToast("Échec de l'annulation. Réessaie.");
+  }
+}
+
+// ============================================================
+// FILTRES
+// ============================================================
+document.querySelectorAll(".filtre").forEach(bouton => {
+  bouton.addEventListener("click", () => {
+    document.querySelectorAll(".filtre").forEach(b => b.classList.remove("actif"));
+    bouton.classList.add("actif");
+    filtreActif = bouton.dataset.filtre;
+    afficherListe();
+  });
+});
+
+function afficherToast(message) {
+  const toast = el("toast");
+  toast.textContent = message;
+  toast.style.display = "block";
+  setTimeout(() => { toast.style.display = "none"; }, 3500);
+}
+
+chargerDocuments();
+</script>
+
+</body>
+</html>
