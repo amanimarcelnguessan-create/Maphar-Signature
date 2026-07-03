@@ -387,10 +387,13 @@
 // ============================================================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
-  getFirestore, collection, query, where, getDocs, limit
+  getFirestore, collection, query, where, getDocs, limit,
+  updateDoc, addDoc, Timestamp
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { PDFDocument } from "https://unpkg.com/[email protected]/dist/pdf-lib.esm.min.js";
 // Pas de Firebase Storage : le PDF est stocké directement dans Firestore
 // (encodé en base64), pour rester sur le forfait 100% gratuit "Spark".
+// pdf-lib sert à fusionner l'image de signature DANS le PDF existant.
 
 // -- À remplacer par tes vraies clés --
 const firebaseConfig = {
@@ -418,6 +421,19 @@ function base64VersArrayBuffer(base64) {
   return octets.buffer;
 }
 
+// Conversion inverse, nécessaire après la fusion pour ré-enregistrer le
+// PDF dans Firestore. Découpée en blocs de 32 Ko pour éviter une erreur
+// "Maximum call stack size exceeded" sur les PDF un peu volumineux.
+function arrayBufferVersBase64(buffer) {
+  const octets = new Uint8Array(buffer);
+  let binaire = "";
+  const tailleBloc = 0x8000;
+  for (let i = 0; i < octets.length; i += tailleBloc) {
+    binaire += String.fromCharCode.apply(null, octets.subarray(i, i + tailleBloc));
+  }
+  return btoa(binaire);
+}
+
 // ============================================================
 // ÉTAT DE L'APPLICATION
 // ============================================================
@@ -443,13 +459,24 @@ function afficherToast(message) {
   setTimeout(() => { toast.style.display = "none"; }, 4000);
 }
 
+const MODES_AFFICHAGE = {
+  "chargement": "block",
+  "pdf-container": "flex",
+  "zone-signature": "block",
+  "attente-tour": "block",
+  "message-final": "block",
+  "erreur": "block"
+};
+
 function basculerEcran(idAAfficher) {
-  ["chargement", "pdf-container", "zone-signature", "attente-tour", "message-final", "erreur"]
-    .forEach(id => {
-      const node = el(id);
-      if (!node) return;
-      node.style.display = (id === idAAfficher) ? "" : "none";
-    });
+  Object.keys(MODES_AFFICHAGE).forEach(id => {
+    const node = el(id);
+    if (!node) return;
+    // On force explicitement "block"/"flex" plutôt que "" (chaîne vide) :
+    // sinon la règle CSS ".ecran-message { display: none }" reprenait
+    // le dessus et l'écran restait invisible même une fois "activé".
+    node.style.display = (id === idAAfficher) ? MODES_AFFICHAGE[id] : "none";
+  });
 }
 
 function afficherErreur(texte) {
@@ -673,12 +700,59 @@ async function validerSignature() {
   btnValider.textContent = "Enregistrement…";
 
   try {
+    // 1. Récupérer l'image de la signature (PNG, fond transparent)
     const signatureImageDataUrl = etat.pad.toDataURL("image/png");
+    const signaturePngBase64 = signatureImageDataUrl.substring(signatureImageDataUrl.indexOf(",") + 1);
+    const signaturePngBytes = base64VersArrayBuffer(signaturePngBase64);
 
-    // -> Étape 3 : fusionnerEtEnregistrer(signatureImageDataUrl, etat)
+    // 2. Charger le PDF actuel (avec les signatures précédentes déjà fusionnées, s'il y en a)
+    const pdfDoc = await PDFDocument.load(etat.pdfBytesOriginal);
+    const image = await pdfDoc.embedPng(signaturePngBytes);
+    const pages = pdfDoc.getPages();
+    const dernierePage = pages[pages.length - 1];
+    const { width: largeurPage, height: hauteurPage } = dernierePage.getSize();
 
-    console.log("Signature capturée pour", etat.signataireCourant.nom);
+    // 3. Positionner l'image selon les coordonnées en pourcentage définies
+    // pour ce signataire (adaptatif portrait/paysage, cf. positionSignature)
+    const pos = etat.signataireCourant.positionSignature;
+    dernierePage.drawImage(image, {
+      x: pos.xPct * largeurPage,
+      y: pos.yPct * hauteurPage,
+      width: pos.largeurPct * largeurPage,
+      height: pos.hauteurPct * hauteurPage
+    });
+
+    // 4. Ré-enregistrer le PDF fusionné en base64
+    const nouveauxBytes = await pdfDoc.save();
+    const nouveauPdfBase64 = arrayBufferVersBase64(nouveauxBytes);
+
+    // 5. Mettre à jour le tableau signataires[] : marquer CE signataire comme "signe"
+    const maintenant = Timestamp.now();
+    const nouveauxSignataires = etat.documentData.signataires.map(s =>
+      s.lienToken === etat.signataireCourant.lienToken
+        ? { ...s, statut: "signe", dateSignature: maintenant }
+        : s
+    );
+    const tousOntSigne = nouveauxSignataires.every(s => s.statut === "signe");
+
+    await updateDoc(etat.documentRef, {
+      signataires: nouveauxSignataires,
+      pdfActuelBase64: nouveauPdfBase64,
+      statutGlobal: tousOntSigne ? "signe" : "en_attente"
+    });
+
+    // 6. Trace d'audit séparée (preuve horodatée, indépendante du document)
+    await addDoc(collection(db, "signatures"), {
+      documentId: etat.documentRef.id,
+      nomSignataire: etat.signataireCourant.nom,
+      fonctionSignataire: etat.signataireCourant.fonction,
+      horodatage: maintenant,
+      userAgent: navigator.userAgent,
+      consentement: true
+    });
+
     afficherSucces();
+
   } catch (err) {
     console.error(err);
     afficherToast("Échec de l'enregistrement. Vérifiez votre connexion et réessayez.");
