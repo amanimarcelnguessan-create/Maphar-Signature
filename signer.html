@@ -360,21 +360,34 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 import {
   getFirestore, collection, query, where, getDocs, limit
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { getStorage } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
+// Pas de Firebase Storage : le PDF est stocké directement dans Firestore
+// (encodé en base64), pour rester sur le forfait 100% gratuit "Spark".
 
 // -- À remplacer par tes vraies clés --
 const firebaseConfig = {
-  apiKey: "TON_API_KEY",
-  authDomain: "TON_PROJET.firebaseapp.com",
-  projectId: "TON_PROJET",
-  storageBucket: "TON_PROJET.appspot.com",
-  messagingSenderId: "TON_SENDER_ID",
-  appId: "TON_APP_ID"
+  apiKey: "AIzaSyDtJcMwK__98-v2Jz2sn5NYxe3X_pggOJU",
+  authDomain: "maphar-signature.firebaseapp.com",
+  projectId: "maphar-signature",
+  storageBucket: "maphar-signature.firebasestorage.app",
+  messagingSenderId: "358074386051",
+  appId: "1:358074386051:web:4853079df71268ae2bfdb6"
 };
 
 const app = initializeApp(firebaseConfig);
-const db = getStorage ? getFirestore(app) : null;
-const storage = getStorage(app);
+const db = getFirestore(app);
+
+// ============================================================
+// UTILITAIRE : convertir une chaîne base64 en ArrayBuffer,
+// le format dont PDF.js a besoin pour afficher le document.
+// ============================================================
+function base64VersArrayBuffer(base64) {
+  const chaineBinaire = atob(base64);
+  const octets = new Uint8Array(chaineBinaire.length);
+  for (let i = 0; i < chaineBinaire.length; i++) {
+    octets[i] = chaineBinaire.charCodeAt(i);
+  }
+  return octets.buffer;
+}
 
 // ============================================================
 // ÉTAT DE L'APPLICATION
@@ -484,8 +497,12 @@ async function chargerDocument(token) {
   }
 
   remplirEnTete();
-  const urlPdf = etat.documentData.pdfActuelUrl || etat.documentData.pdfOriginalUrl;
-  await chargerEtAfficherPDF(urlPdf);
+  const base64Pdf = etat.documentData.pdfActuelBase64 || etat.documentData.pdfOriginalBase64;
+  if (!base64Pdf) {
+    afficherErreur("Le fichier PDF de ce document est introuvable. Contactez MAPHAR.");
+    return;
+  }
+  await chargerEtAfficherPDF(base64Pdf);
 }
 
 function remplirEnTete() {
@@ -502,11 +519,10 @@ function remplirEnTete() {
 // ============================================================
 // 2. AFFICHAGE DU PDF (PDF.js)
 // ============================================================
-async function chargerEtAfficherPDF(url) {
-  const reponse = await fetch(url);
-  if (!reponse.ok) throw new Error("Échec du téléchargement du PDF");
-
-  const arrayBuffer = await reponse.arrayBuffer();
+async function chargerEtAfficherPDF(base64Pdf) {
+  // Le PDF est déjà présent dans les données Firestore (base64),
+  // donc aucune requête réseau supplémentaire n'est nécessaire ici.
+  const arrayBuffer = base64VersArrayBuffer(base64Pdf);
   etat.pdfBytesOriginal = arrayBuffer.slice(0);
 
   window.pdfjsLib.GlobalWorkerOptions.workerSrc =
