@@ -742,12 +742,18 @@ async function validerSignature() {
     });
 
     // 6. Trace d'audit séparée (preuve horodatée, indépendante du document)
+    // On conserve aussi l'image brute de la signature : utile comme preuve
+    // indépendante du PDF, et permet de re-générer le document si jamais
+    // la position doit être corrigée après coup.
     await addDoc(collection(db, "signatures"), {
       documentId: etat.documentRef.id,
+      lienToken: etat.signataireCourant.lienToken,
+      ordre: etat.signataireCourant.ordre,
       nomSignataire: etat.signataireCourant.nom,
       fonctionSignataire: etat.signataireCourant.fonction,
       horodatage: maintenant,
       userAgent: navigator.userAgent,
+      signatureImageBase64: signaturePngBase64,
       consentement: true
     });
 

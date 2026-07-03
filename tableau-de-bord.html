@@ -398,6 +398,17 @@ function construireCarte(d) {
   const actions = document.createElement("div");
   actions.className = "actions-doc";
 
+  if (nbSignes > 0) {
+    const btnAjuster = document.createElement("button");
+    btnAjuster.className = "btn-action btn-copier-lien";
+    btnAjuster.type = "button";
+    btnAjuster.textContent = "🎯 Ajuster les positions";
+    btnAjuster.addEventListener("click", () => {
+      window.location.href = "ajuster-document.html?doc=" + d.id;
+    });
+    actions.appendChild(btnAjuster);
+  }
+
   if (d.statutGlobal === "signe" && d.pdfActuelBase64) {
     const btnDl = document.createElement("button");
     btnDl.className = "btn-action btn-telecharger";

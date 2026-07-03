@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Ajuster les signatures — MAPHAR</title>
+<meta name="theme-color" content="#4a6b4d">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" defer></script>
+
+<style>
+  :root {
+    --blanc: #ffffff;
+    --sauge: #7d9a7f;
+    --sauge-clair: #e3ecdf;
+    --sauge-fonce: #4a6b4d;
+    --charbon: #2b2b2b;
+    --charbon-doux: #6b7b6f;
+    --or-champagne: #c9a968;
+    --bordure: #e5e5e0;
+    --alerte: #a34a4a;
+    --alerte-fond: #f7e9e7;
+    --rayon: 12px;
+    --ombre: 0 2px 12px rgba(43, 43, 43, 0.06);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    background: #f4f4f2;
+    color: var(--charbon);
+    padding-bottom: 100px;
+  }
+  header {
+    background: var(--blanc);
+    padding: 18px 20px;
+    border-bottom: 1px solid var(--bordure);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  .header-marque {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--sauge-fonce);
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+  header h1 { font-size: 17px; margin: 0; }
+
+  main { max-width: 720px; margin: 0 auto; padding: 16px; }
+
+  #zone-pdf {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  .enveloppe-page {
+    position: relative;
+    width: 100%;
+    max-width: 720px;
+    border: 1px solid var(--bordure);
+    box-shadow: var(--ombre);
+    background: white;
+  }
+  .enveloppe-page canvas { width: 100%; display: block; }
+
+  .signature-ajustable {
+    position: absolute;
+    border: 2px solid var(--or-champagne);
+    background: rgba(255, 255, 255, 0.6);
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .signature-ajustable img { max-width: 90%; max-height: 90%; }
+  .signature-ajustable.actif { border-color: var(--sauge-fonce); box-shadow: 0 0 0 3px rgba(74,107,77,0.2); }
+
+  .carte-controle {
+    background: var(--blanc);
+    border: 1px solid var(--bordure);
+    border-radius: var(--rayon);
+    box-shadow: var(--ombre);
+    padding: 16px;
+    margin-top: 14px;
+  }
+  .carte-controle h3 { font-size: 14px; margin: 0 0 10px 0; }
+  .grille-fleches {
+    display: grid;
+    grid-template-columns: repeat(3, 48px);
+    grid-template-rows: repeat(2, 48px);
+    gap: 6px;
+    justify-content: center;
+    margin: 10px 0;
+  }
+  .grille-fleches button {
+    border: 1px solid var(--bordure);
+    background: var(--sauge-clair);
+    color: var(--sauge-fonce);
+    border-radius: 8px;
+    font-size: 18px;
+    cursor: pointer;
+  }
+  .grille-fleches button:active { background: var(--sauge); color: white; }
+  .fleche-vide { visibility: hidden; }
+
+  select.selecteur-signataire {
+    width: 100%;
+    padding: 10px;
+    border-radius: 8px;
+    border: 1px solid var(--bordure);
+    font-size: 13.5px;
+    margin-bottom: 10px;
+  }
+
+  .barre-bas {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    background: var(--blanc);
+    border-top: 1px solid var(--bordure);
+    padding: 12px 16px;
+    box-shadow: 0 -2px 12px rgba(43,43,43,0.08);
+  }
+  .barre-bas button {
+    width: 100%;
+    max-width: 720px;
+    margin: 0 auto;
+    display: block;
+    padding: 14px;
+    background: var(--sauge-fonce);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 14.5px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .barre-bas button:disabled { background: #c9d3ca; }
+
+  #toast {
+    position: fixed;
+    left: 16px; right: 16px; bottom: 80px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    display: none;
+    z-index: 50;
+    box-shadow: var(--ombre);
+  }
+  #toast.succes { background: var(--sauge-clair); color: var(--sauge-fonce); }
+  #toast.erreur { background: var(--alerte-fond); color: var(--alerte); }
+
+  #chargement, #erreur { text-align: center; padding: 60px 24px; color: var(--charbon-doux); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-marque">MAPHAR · Ajustement des signatures</div>
+  <h1 id="titre-doc">Chargement…</h1>
+</header>
+
+<main>
+  <div id="chargement">Chargement du document…</div>
+  <div id="erreur" style="display:none;">Document introuvable ou aucune signature disponible pour ajustement.</div>
+
+  <div id="zone-pdf"></div>
+
+  <div id="carte-controle" class="carte-controle" style="display:none;">
+    <h3>🎯 Sélectionner et déplacer une signature</h3>
+    <select id="selecteur-signataire" class="selecteur-signataire"></select>
+    <div class="grille-fleches">
+      <span class="fleche-vide"></span>
+      <button type="button" data-dir="haut">▲</button>
+      <span class="fleche-vide"></span>
+      <button type="button" data-dir="gauche">◀</button>
+      <button type="button" data-dir="bas">▼</button>
+      <button type="button" data-dir="droite">▶</button>
+    </div>
+    <p style="font-size:12px; color:var(--charbon-doux); text-align:center; margin:0;">
+      Chaque flèche déplace la signature de 1 %. Sélectionne d'abord un signataire dans la liste.
+    </p>
+  </div>
+</main>
+
+<div class="barre-bas">
+  <button id="btn-regenerer" type="button" disabled>Enregistrer les positions et régénérer le PDF</button>
+</div>
+
+<div id="toast"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {
+  getFirestore, doc, getDoc, updateDoc, collection, query, where, getDocs
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { PDFDocument } from "https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.esm.min.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDtJcMwK__98-v2Jz2sn5NYxe3X_pggOJU",
+  authDomain: "maphar-signature.firebaseapp.com",
+  projectId: "maphar-signature",
+  storageBucket: "maphar-signature.firebasestorage.app",
+  messagingSenderId: "358074386051",
+  appId: "1:358074386051:web:4853079df71268ae2bfdb6"
+};
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const el = (id) => document.getElementById(id);
+const docId = new URLSearchParams(window.location.search).get("doc");
+
+let documentData = null;
+let documentRef = null;
+let signaturesParToken = {}; // { lienToken: { image base64, ... } }
+let positionsAjustees = {};  // { lienToken: { xPct, yPct, largeurPct, hauteurPct } }
+let tokenSelectionne = null;
+let enveloppePage = null;
+let dimensionsPage = { largeur: 0, hauteur: 0 };
+
+function base64VersArrayBuffer(base64) {
+  const bin = atob(base64);
+  const octets = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) octets[i] = bin.charCodeAt(i);
+  return octets.buffer;
+}
+function arrayBufferVersBase64(buffer) {
+  const octets = new Uint8Array(buffer);
+  let bin = "";
+  const bloc = 0x8000;
+  for (let i = 0; i < octets.length; i += bloc) bin += String.fromCharCode.apply(null, octets.subarray(i, i + bloc));
+  return btoa(bin);
+}
+
+async function demarrer() {
+  if (!docId) { afficherErreur(); return; }
+  try {
+    const snap = await getDoc(doc(db, "documents", docId));
+    if (!snap.exists()) { afficherErreur(); return; }
+    documentData = snap.data();
+    documentRef = snap.ref;
+    el("titre-doc").textContent = documentData.titre;
+
+    const sigSnap = await getDocs(query(collection(db, "signatures"), where("documentId", "==", docId)));
+    sigSnap.docs.forEach(d => {
+      const data = d.data();
+      if (data.lienToken && data.signatureImageBase64) {
+        signaturesParToken[data.lienToken] = data;
+      }
+    });
+
+    const signatairesAvecImage = documentData.signataires.filter(s => signaturesParToken[s.lienToken]);
+    if (signatairesAvecImage.length === 0) {
+      el("chargement").style.display = "none";
+      el("erreur").textContent = "Aucune signature avec image disponible pour ajustement (documents signés avant cette fonctionnalité).";
+      el("erreur").style.display = "block";
+      return;
+    }
+
+    signatairesAvecImage.forEach(s => {
+      positionsAjustees[s.lienToken] = { ...s.positionSignature };
+    });
+
+    await afficherPDF();
+    remplirSelecteur(signatairesAvecImage);
+    dessinerToutesLesSignatures();
+
+    el("carte-controle").style.display = "block";
+    el("btn-regenerer").disabled = false;
+
+  } catch (err) {
+    console.error(err);
+    afficherErreur();
+  }
+}
+
+function afficherErreur() {
+  el("chargement").style.display = "none";
+  el("erreur").style.display = "block";
+}
+
+async function afficherPDF() {
+  const base64Pdf = documentData.pdfActuelBase64 || documentData.pdfOriginalBase64;
+  const buffer = base64VersArrayBuffer(base64Pdf);
+  window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+    "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+  const pdf = await window.pdfjsLib.getDocument({ data: buffer }).promise;
+  const derniere = await pdf.getPage(pdf.numPages);
+  const viewport = derniere.getViewport({ scale: 1.5 });
+
+  dimensionsPage = { largeur: viewport.width, hauteur: viewport.height };
+
+  enveloppePage = document.createElement("div");
+  enveloppePage.className = "enveloppe-page";
+  const canvas = document.createElement("canvas");
+  canvas.width = viewport.width;
+  canvas.height = viewport.height;
+  enveloppePage.appendChild(canvas);
+  el("zone-pdf").appendChild(enveloppePage);
+
+  await derniere.render({ canvasContext: canvas.getContext("2d"), viewport }).promise;
+  el("chargement").style.display = "none";
+}
+
+function remplirSelecteur(signataires) {
+  const select = el("selecteur-signataire");
+  select.innerHTML = "";
+  signataires.forEach(s => {
+    const option = document.createElement("option");
+    option.value = s.lienToken;
+    option.textContent = s.nom + " — " + s.fonction;
+    select.appendChild(option);
+  });
+  tokenSelectionne = signataires[0].lienToken;
+  select.addEventListener("change", () => {
+    tokenSelectionne = select.value;
+    dessinerToutesLesSignatures();
+  });
+}
+
+function dessinerToutesLesSignatures() {
+  enveloppePage.querySelectorAll(".signature-ajustable").forEach(n => n.remove());
+
+  Object.keys(positionsAjustees).forEach(token => {
+    const pos = positionsAjustees[token];
+    const sig = signaturesParToken[token];
+    const boite = document.createElement("div");
+    boite.className = "signature-ajustable" + (token === tokenSelectionne ? " actif" : "");
+    boite.style.left = (pos.xPct * 100) + "%";
+    boite.style.width = (pos.largeurPct * 100) + "%";
+    boite.style.top = ((1 - pos.yPct - pos.hauteurPct) * 100) + "%";
+    boite.style.height = (pos.hauteurPct * 100) + "%";
+
+    const img = document.createElement("img");
+    img.src = "data:image/png;base64," + sig.signatureImageBase64;
+    boite.appendChild(img);
+
+    boite.addEventListener("click", () => {
+      tokenSelectionne = token;
+      el("selecteur-signataire").value = token;
+      dessinerToutesLesSignatures();
+    });
+
+    enveloppePage.appendChild(boite);
+  });
+}
+
+document.querySelectorAll(".grille-fleches button[data-dir]").forEach(bouton => {
+  bouton.addEventListener("click", () => {
+    if (!tokenSelectionne) return;
+    const pas = 0.01;
+    const pos = positionsAjustees[tokenSelectionne];
+    const dir = bouton.dataset.dir;
+    if (dir === "haut") pos.yPct = Math.min(0.95, pos.yPct + pas);
+    if (dir === "bas") pos.yPct = Math.max(0, pos.yPct - pas);
+    if (dir === "gauche") pos.xPct = Math.max(0, pos.xPct - pas);
+    if (dir === "droite") pos.xPct = Math.min(0.9, pos.xPct + pas);
+    dessinerToutesLesSignatures();
+  });
+});
+
+// ============================================================
+// RÉGÉNÉRATION COMPLÈTE DU PDF avec les positions ajustées
+// ============================================================
+el("btn-regenerer").addEventListener("click", async () => {
+  const btn = el("btn-regenerer");
+  btn.disabled = true;
+  btn.textContent = "Régénération en cours…";
+
+  try {
+    // On repart TOUJOURS du PDF original vierge pour éviter d'empiler
+    // des signatures les unes sur les autres à chaque ajustement.
+    const pdfDoc = await PDFDocument.load(base64VersArrayBuffer(documentData.pdfOriginalBase64));
+    const pages = pdfDoc.getPages();
+    const dernierePage = pages[pages.length - 1];
+    const { width, height } = dernierePage.getSize();
+
+    for (const token of Object.keys(positionsAjustees)) {
+      const pos = positionsAjustees[token];
+      const sig = signaturesParToken[token];
+      const pngBytes = base64VersArrayBuffer(sig.signatureImageBase64);
+      const image = await pdfDoc.embedPng(pngBytes);
+      dernierePage.drawImage(image, {
+        x: pos.xPct * width,
+        y: pos.yPct * height,
+        width: pos.largeurPct * width,
+        height: pos.hauteurPct * height
+      });
+    }
+
+    const nouveauxBytes = await pdfDoc.save();
+    const nouveauBase64 = arrayBufferVersBase64(nouveauxBytes);
+
+    const nouveauxSignataires = documentData.signataires.map(s =>
+      positionsAjustees[s.lienToken]
+        ? { ...s, positionSignature: positionsAjustees[s.lienToken] }
+        : s
+    );
+
+    await updateDoc(documentRef, {
+      pdfActuelBase64: nouveauBase64,
+      signataires: nouveauxSignataires
+    });
+
+    afficherToast("PDF régénéré avec succès !", "succes");
+    btn.textContent = "✓ Enregistré";
+    setTimeout(() => { window.location.href = "tableau-de-bord.html"; }, 1200);
+
+  } catch (err) {
+    console.error(err);
+    afficherToast("Échec de la régénération. Réessaie.", "erreur");
+    btn.disabled = false;
+    btn.textContent = "Enregistrer les positions et régénérer le PDF";
+  }
+});
+
+function afficherToast(message, type) {
+  const toast = el("toast");
+  toast.textContent = message;
+  toast.className = type;
+  toast.style.display = "block";
+  setTimeout(() => { toast.style.display = "none"; }, 3500);
+}
+
+demarrer();
+</script>
+
+</body>
+</html>
