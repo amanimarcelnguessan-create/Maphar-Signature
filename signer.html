@@ -120,6 +120,32 @@
     margin-top: -8px;
   }
 
+  .repere-signature {
+    position: absolute;
+    border: 2px dashed var(--or-champagne);
+    background: rgba(201, 169, 104, 0.12);
+    border-radius: 4px;
+    pointer-events: none;
+    animation: pulse-repere 2s ease-in-out infinite;
+  }
+  .repere-etiquette {
+    position: absolute;
+    bottom: 100%;
+    left: 0;
+    margin-bottom: 4px;
+    background: var(--or-champagne);
+    color: white;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+  }
+  @keyframes pulse-repere {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.55; }
+  }
+
   /* --- Chargement : squelette animé, plus professionnel qu'un simple texte --- */
   #chargement {
     padding: 24px 16px;
@@ -308,6 +334,9 @@
 
   <section id="zone-signature" aria-label="Zone de signature">
     <h2>✍️ Votre signature</h2>
+    <p style="font-size:12.5px; color:var(--charbon-doux); margin:-6px 0 12px 0;">
+      Elle sera automatiquement placée à l'endroit repéré en <strong style="color:var(--or-champagne);">doré</strong> sur la dernière page ci-dessus.
+    </p>
     <div id="pad-wrapper">
       <span id="pad-placeholder">Signez ici avec votre doigt</span>
       <canvas id="signature-pad"></canvas>
@@ -538,12 +567,19 @@ async function chargerEtAfficherPDF(base64Pdf) {
     const page = await etat.pdfDoc.getPage(numPage);
     const viewport = page.getViewport({ scale: 1.5 });
 
+    // Enveloppe pour pouvoir positionner un repère par-dessus le canvas
+    const enveloppe = document.createElement("div");
+    enveloppe.style.position = "relative";
+    enveloppe.style.width = "100%";
+    enveloppe.style.maxWidth = "720px";
+
     const canvas = document.createElement("canvas");
     canvas.width = viewport.width;
     canvas.height = viewport.height;
     canvas.setAttribute("role", "img");
     canvas.setAttribute("aria-label", "Page " + numPage + " du document");
-    container.appendChild(canvas);
+    enveloppe.appendChild(canvas);
+    container.appendChild(enveloppe);
 
     const legende = document.createElement("span");
     legende.className = "numero-page";
@@ -552,6 +588,13 @@ async function chargerEtAfficherPDF(base64Pdf) {
 
     const ctx = canvas.getContext("2d");
     await page.render({ canvasContext: ctx, viewport }).promise;
+
+    // Repère visuel : uniquement sur la dernière page, à l'endroit
+    // exact où CETTE signature sera insérée lors de la fusion (étape 3).
+    const estDernierePage = numPage === etat.pdfDoc.numPages;
+    if (estDernierePage && etat.signataireCourant.positionSignature) {
+      ajouterRepereSignature(enveloppe, etat.signataireCourant.positionSignature);
+    }
   }
 
   basculerEcran("pdf-container");
@@ -560,8 +603,28 @@ async function chargerEtAfficherPDF(base64Pdf) {
 }
 
 // ============================================================
-// 3. PAVÉ DE SIGNATURE
+// REPÈRE VISUEL : montre au signataire où sa signature sera
+// insérée sur le PDF final, avant même qu'il ne dessine quoi que
+// ce soit. Positionné en pourcentages pour rester exact quelle
+// que soit la taille d'affichage du PDF.
 // ============================================================
+function ajouterRepereSignature(enveloppe, position) {
+  const repere = document.createElement("div");
+  repere.className = "repere-signature";
+  repere.style.left = (position.xPct * 100) + "%";
+  repere.style.width = (position.largeurPct * 100) + "%";
+  repere.style.top = ((1 - position.yPct - position.hauteurPct) * 100) + "%";
+  repere.style.height = (position.hauteurPct * 100) + "%";
+
+  const etiquette = document.createElement("span");
+  etiquette.className = "repere-etiquette";
+  etiquette.textContent = "✍️ Votre signature ici";
+  repere.appendChild(etiquette);
+
+  enveloppe.appendChild(repere);
+}
+
+
 function initSignaturePad() {
   const canvas = el("signature-pad");
   const placeholder = el("pad-placeholder");
