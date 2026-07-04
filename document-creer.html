@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Créer un document — MAPHAR Signature</title>
+<meta name="theme-color" content="#4a6b4d">
+
+<style>
+  :root {
+    --blanc: #ffffff;
+    --sauge: #7d9a7f;
+    --sauge-clair: #e3ecdf;
+    --sauge-fonce: #4a6b4d;
+    --charbon: #2b2b2b;
+    --charbon-doux: #6b7b6f;
+    --or-champagne: #c9a968;
+    --bordure: #e5e5e0;
+    --alerte: #a34a4a;
+    --alerte-fond: #f7e9e7;
+    --rayon: 12px;
+    --ombre: 0 2px 12px rgba(43, 43, 43, 0.06);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    background: #f4f4f2;
+    color: var(--charbon);
+    padding-bottom: 40px;
+  }
+  header {
+    background: var(--blanc);
+    padding: 18px 20px;
+    border-bottom: 1px solid var(--bordure);
+  }
+  .header-marque {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--sauge-fonce);
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .header-ligne {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+  }
+  header h1 { font-size: 18px; margin: 0; }
+  .lien-nav {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--sauge-fonce);
+    text-decoration: none;
+    background: var(--sauge-clair);
+    padding: 8px 12px;
+    border-radius: 8px;
+    white-space: nowrap;
+  }
+
+  main { max-width: 640px; margin: 0 auto; padding: 16px; }
+
+  .carte {
+    background: var(--blanc);
+    border: 1px solid var(--bordure);
+    border-radius: var(--rayon);
+    box-shadow: var(--ombre);
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  .carte h2 {
+    font-size: 15px;
+    margin: 0 0 14px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--charbon-doux);
+    margin-bottom: 6px;
+    margin-top: 14px;
+  }
+  label:first-of-type { margin-top: 0; }
+  input[type="text"], input[type="tel"], select {
+    width: 100%;
+    padding: 11px 12px;
+    border: 1px solid var(--bordure);
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    background: #fafaf8;
+  }
+  input[type="file"] {
+    width: 100%;
+    padding: 11px 12px;
+    border: 2px dashed var(--sauge-clair);
+    border-radius: 8px;
+    background: #fafaf8;
+    font-size: 13px;
+  }
+
+  .signataire-bloc {
+    border: 1px solid var(--bordure);
+    border-radius: 8px;
+    padding: 14px;
+    margin-top: 12px;
+    background: #fafaf8;
+    position: relative;
+  }
+  .signataire-bloc .numero {
+    position: absolute;
+    top: -10px;
+    left: 12px;
+    background: var(--sauge-fonce);
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 10px;
+  }
+  .colonnes-position {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .btn-retirer {
+    background: none;
+    border: none;
+    color: var(--alerte);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 10px;
+    padding: 0;
+  }
+  #btn-ajouter-signataire {
+    width: 100%;
+    padding: 12px;
+    border: 2px dashed var(--sauge);
+    background: var(--sauge-clair);
+    color: var(--sauge-fonce);
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 14px;
+    margin-top: 14px;
+    cursor: pointer;
+  }
+
+  #btn-creer {
+    width: 100%;
+    padding: 15px;
+    background: var(--sauge-fonce);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 8px;
+  }
+  #btn-creer:disabled { background: #c9d3ca; cursor: not-allowed; }
+
+  #zone-resultat { display: none; }
+  .lien-signataire {
+    background: var(--sauge-clair);
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-top: 10px;
+  }
+  .lien-signataire .nom { font-weight: 700; font-size: 14px; margin-bottom: 6px; }
+  .lien-signataire .url {
+    font-size: 12px;
+    word-break: break-all;
+    color: var(--sauge-fonce);
+    background: white;
+    padding: 8px;
+    border-radius: 6px;
+    display: block;
+    margin-bottom: 8px;
+  }
+  .btn-copier {
+    background: var(--sauge-fonce);
+    color: white;
+    border: none;
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  #toast {
+    position: fixed;
+    left: 16px; right: 16px; bottom: 16px;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    display: none;
+    z-index: 50;
+    box-shadow: var(--ombre);
+  }
+  #toast.succes { background: var(--sauge-clair); color: var(--sauge-fonce); }
+  #toast.erreur { background: var(--alerte-fond); color: var(--alerte); }
+
+  .avertissement-taille {
+    display: none;
+    background: var(--alerte-fond);
+    color: var(--alerte);
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-size: 12.5px;
+    margin-top: 10px;
+  }
+  .info-taille {
+    font-size: 12px;
+    color: var(--charbon-doux);
+    margin-top: 6px;
+  }
+
+  /* ===== Logo & en-tête premium ===== */
+  .logo-app {
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    object-fit: cover;
+    box-shadow: var(--ombre);
+  }
+  .header-marque-ligne {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .lien-deconnexion {
+    font-size: 11.5px;
+    color: var(--charbon-doux);
+    text-decoration: underline;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    margin-top: 8px;
+  }
+
+  /* ===== Écran de connexion ===== */
+  #ecran-connexion {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: linear-gradient(160deg, #f4f4f2 0%, var(--sauge-clair) 100%);
+  }
+  .carte-connexion {
+    background: var(--blanc);
+    border-radius: 18px;
+    box-shadow: 0 8px 32px rgba(43,43,43,0.10);
+    padding: 32px 26px;
+    max-width: 360px;
+    width: 100%;
+    text-align: center;
+  }
+  .carte-connexion img {
+    width: 64px;
+    height: 64px;
+    border-radius: 14px;
+    margin-bottom: 14px;
+    box-shadow: var(--ombre);
+  }
+  .carte-connexion h1 {
+    font-size: 18px;
+    margin: 0 0 4px 0;
+  }
+  .carte-connexion p.sous-titre-connexion {
+    font-size: 12.5px;
+    color: var(--charbon-doux);
+    margin: 0 0 22px 0;
+  }
+  .carte-connexion input {
+    width: 100%;
+    padding: 13px 14px;
+    border: 1px solid var(--bordure);
+    border-radius: 10px;
+    font-size: 14px;
+    font-family: inherit;
+    background: #fafaf8;
+    margin-bottom: 12px;
+  }
+  .carte-connexion button {
+    width: 100%;
+    padding: 14px;
+    background: var(--sauge-fonce);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 14.5px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .carte-connexion button:disabled { background: #c9d3ca; }
+  #erreur-connexion {
+    color: var(--alerte);
+    font-size: 12.5px;
+    margin-top: 12px;
+    display: none;
+  }
+
+  /* ===== Navigation basse (mobile-first, style app native) ===== */
+  #nav-basse {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    background: var(--blanc);
+    border-top: 1px solid var(--bordure);
+    display: flex;
+    padding: 8px 12px calc(8px + env(safe-area-inset-bottom));
+    box-shadow: 0 -2px 12px rgba(43,43,43,0.06);
+    z-index: 15;
+  }
+  #nav-basse a {
+    flex: 1;
+    text-align: center;
+    text-decoration: none;
+    color: var(--charbon-doux);
+    font-size: 11px;
+    font-weight: 700;
+    padding: 6px 4px;
+    border-radius: 10px;
+  }
+  #nav-basse a .icone-nav { display: block; font-size: 19px; margin-bottom: 2px; }
+  #nav-basse a.actif { color: var(--sauge-fonce); background: var(--sauge-clair); }
+
+  body.avec-nav-basse { padding-bottom: 84px; }
+  #app-contenu { display: none; }
+</style>
+</head>
+<body>
+
+<div id="ecran-connexion">
+  <div class="carte-connexion">
+    <img src="logo-maphar.jpg" alt="Logo MAPHAR">
+    <h1>MAPHAR Signature</h1>
+    <p class="sous-titre-connexion">Espace administrateur — connexion requise</p>
+    <input type="email" id="input-email-connexion" placeholder="Email" autocomplete="username">
+    <input type="password" id="input-mdp-connexion" placeholder="Mot de passe" autocomplete="current-password">
+    <button type="button" id="btn-connexion">Se connecter</button>
+    <p id="erreur-connexion"></p>
+  </div>
+</div>
+
+<div id="app-contenu">
+
+<header>
+  <div class="header-marque-ligne">
+    <img class="logo-app" src="logo-maphar.jpg" alt="Logo MAPHAR">
+    <div class="header-marque">MAPHAR · Signature électronique</div>
+  </div>
+  <div class="header-ligne">
+    <h1>Nouveau document à signer</h1>
+  </div>
+  <button type="button" class="lien-deconnexion" id="btn-deconnexion">Se déconnecter</button>
+</header>
+
+<main>
+  <div class="carte">
+    <h2>📄 Le document</h2>
+    <label for="input-titre">Titre du document</label>
+    <input type="text" id="input-titre" placeholder="Ex : PV Réunion BEX du 15/07/2026">
+
+    <label for="input-type">Type</label>
+    <select id="input-type">
+      <option value="pv">Procès-verbal (PV)</option>
+      <option value="compte_rendu">Compte rendu</option>
+      <option value="courrier">Courrier</option>
+    </select>
+
+    <label for="input-fichier">Fichier PDF</label>
+    <input type="file" id="input-fichier" accept="application/pdf">
+    <p class="info-taille" id="info-taille"></p>
+    <p class="avertissement-taille" id="avertissement-taille">
+      ⚠️ Ce fichier est volumineux et risque de dépasser la limite de Firestore (1 Mo par document).
+      Essaie de compresser le PDF avant de l'importer, ou contacte-moi pour une alternative.
+    </p>
+  </div>
+
+  <div class="carte">
+    <h2>✍️ Signataires</h2>
+    <div id="liste-signataires"></div>
+    <button type="button" id="btn-ajouter-signataire">+ Ajouter un signataire</button>
+  </div>
+
+  <button type="button" id="btn-creer" disabled>Créer le document et générer les liens</button>
+
+  <div id="zone-resultat" class="carte">
+    <h2>✅ Document créé</h2>
+    <p style="font-size:13px; color:var(--charbon-doux);">
+      Envoie à chaque signataire son lien personnel par WhatsApp ou email.
+      Les liens restent valides <strong>14 jours</strong>.
+    </p>
+    <div id="liste-liens"></div>
+  </div>
+</main>
+
+<nav id="nav-basse">
+  <a href="document-creer.html" class="actif"><span class="icone-nav">➕</span>Créer</a>
+  <a href="tableau-de-bord.html"><span class="icone-nav">📋</span>Tableau de bord</a>
+</nav>
+
+</div>
+
+<div id="toast"></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {
+  getFirestore, collection, addDoc, Timestamp
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import {
+  getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDtJcMwK__98-v2Jz2sn5NYxe3X_pggOJU",
+  authDomain: "maphar-signature.firebaseapp.com",
+  projectId: "maphar-signature",
+  storageBucket: "maphar-signature.firebasestorage.app",
+  messagingSenderId: "358074386051",
+  appId: "1:358074386051:web:4853079df71268ae2bfdb6"
+};
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const auth = getAuth(app);
+
+// ============================================================
+// GARDE D'AUTHENTIFICATION — bloque l'accès tant que l'admin
+// n'est pas connecté. Repose sur Firebase Authentication (vérifié
+// côté serveur Google), pas un simple mot de passe caché dans le JS.
+// ============================================================
+onAuthStateChanged(auth, (utilisateur) => {
+  if (utilisateur) {
+    document.getElementById("ecran-connexion").style.display = "none";
+    document.getElementById("app-contenu").style.display = "block";
+    document.body.classList.add("avec-nav-basse");
+  } else {
+    document.getElementById("ecran-connexion").style.display = "flex";
+    document.getElementById("app-contenu").style.display = "none";
+    document.body.classList.remove("avec-nav-basse");
+  }
+});
+
+document.getElementById("btn-connexion").addEventListener("click", async () => {
+  const email = document.getElementById("input-email-connexion").value.trim();
+  const motDePasse = document.getElementById("input-mdp-connexion").value;
+  const erreur = document.getElementById("erreur-connexion");
+  erreur.style.display = "none";
+
+  try {
+    await signInWithEmailAndPassword(auth, email, motDePasse);
+  } catch (err) {
+    erreur.textContent = "Email ou mot de passe incorrect.";
+    erreur.style.display = "block";
+  }
+});
+
+document.getElementById("btn-deconnexion").addEventListener("click", () => signOut(auth));
+
+// ⚠️ À adapter si ton dépôt GitHub Pages a une URL différente
+const BASE_URL_SIGNATURE = "https://amanimarcelnguessan-create.github.io/Maphar-Signature/signer.html";
+
+
+const el = (id) => document.getElementById(id);
+let compteurSignataires = 0;
+let pdfBase64Choisi = null;
+
+// ============================================================
+// GESTION DES BLOCS SIGNATAIRES (dynamique, 1 à N)
+// ============================================================
+function ajouterBlocSignataire() {
+  compteurSignataires++;
+  const id = compteurSignataires;
+
+  const bloc = document.createElement("div");
+  bloc.className = "signataire-bloc";
+  bloc.dataset.id = id;
+  bloc.innerHTML = `
+    <span class="numero">Signataire ${document.querySelectorAll('.signataire-bloc').length + 1}</span>
+    <label>Nom complet</label>
+    <input type="text" class="champ-nom" placeholder="Ex : Dr. KOFFI Emmanuel">
+    <label>Fonction (pour ce document précis)</label>
+    <input type="text" class="champ-fonction" placeholder="Ex : Président de Séance">
+    <label>Téléphone (WhatsApp)</label>
+    <input type="tel" class="champ-telephone" placeholder="Ex : +225 07 00 00 00 00">
+    <label>Position de la signature sur la dernière page</label>
+    <div class="colonnes-position">
+      <select class="champ-position-x">
+        <option value="0.12">Gauche</option>
+        <option value="0.59">Droite</option>
+        <option value="0.35">Centre</option>
+      </select>
+      <select class="champ-position-y">
+        <option value="0.72">Juste sous les noms (haut de page)</option>
+        <option value="0.45">Milieu de page</option>
+        <option value="0.10">Bas de page</option>
+      </select>
+    </div>
+    <button type="button" class="btn-retirer">Retirer ce signataire</button>
+  `;
+  bloc.querySelector(".btn-retirer").addEventListener("click", () => {
+    bloc.remove();
+    renumeroterBlocs();
+    verifierFormulaireValide();
+  });
+  bloc.querySelectorAll("input").forEach(champ =>
+    champ.addEventListener("input", verifierFormulaireValide)
+  );
+
+  el("liste-signataires").appendChild(bloc);
+  verifierFormulaireValide();
+}
+
+function renumeroterBlocs() {
+  document.querySelectorAll(".signataire-bloc").forEach((bloc, index) => {
+    bloc.querySelector(".numero").textContent = "Signataire " + (index + 1);
+  });
+}
+
+el("btn-ajouter-signataire").addEventListener("click", ajouterBlocSignataire);
+ajouterBlocSignataire(); // au moins un signataire par défaut
+
+// ============================================================
+// GESTION DU FICHIER PDF → conversion base64
+// ============================================================
+el("input-fichier").addEventListener("change", async (evenement) => {
+  const fichier = evenement.target.files[0];
+  if (!fichier) return;
+
+  const tailleKo = Math.round(fichier.size / 1024);
+  el("info-taille").textContent = "Taille du fichier : " + tailleKo + " Ko";
+
+  const base64 = await fichierVersBase64(fichier);
+  pdfBase64Choisi = base64;
+
+  // La taille encodée en base64 augmente d'environ 33%
+  const tailleEncodeeKo = Math.round((base64.length * 0.75) / 1024 * 1.33);
+  if (tailleEncodeeKo > 700) {
+    el("avertissement-taille").style.display = "block";
+  } else {
+    el("avertissement-taille").style.display = "none";
+  }
+
+  verifierFormulaireValide();
+});
+
+function fichierVersBase64(fichier) {
+  return new Promise((resoudre, rejeter) => {
+    const lecteur = new FileReader();
+    lecteur.onload = () => {
+      // Le résultat contient un préfixe "data:application/pdf;base64,"
+      // qu'on retire pour ne garder que les données utiles.
+      const resultat = lecteur.result;
+      const base64Pur = resultat.substring(resultat.indexOf(",") + 1);
+      resoudre(base64Pur);
+    };
+    lecteur.onerror = rejeter;
+    lecteur.readAsDataURL(fichier);
+  });
+}
+
+// ============================================================
+// VALIDATION DU FORMULAIRE
+// ============================================================
+function verifierFormulaireValide() {
+  const titreRempli = el("input-titre").value.trim().length > 0;
+  const fichierPret = !!pdfBase64Choisi;
+  const blocs = document.querySelectorAll(".signataire-bloc");
+  const auMoinsUnSignataire = blocs.length > 0;
+  const tousLesNomsRemplis = Array.from(blocs).every(
+    b => b.querySelector(".champ-nom").value.trim().length > 0
+  );
+
+  el("btn-creer").disabled = !(titreRempli && fichierPret && auMoinsUnSignataire && tousLesNomsRemplis);
+}
+el("input-titre").addEventListener("input", verifierFormulaireValide);
+
+// ============================================================
+// GÉNÉRATION D'UN TOKEN ALÉATOIRE ET SÉCURISÉ
+// ============================================================
+function genererToken() {
+  const octets = new Uint8Array(16);
+  crypto.getRandomValues(octets);
+  return Array.from(octets, o => o.toString(16).padStart(2, "0")).join("");
+}
+
+// ============================================================
+// CRÉATION DU DOCUMENT DANS FIRESTORE
+// ============================================================
+el("btn-creer").addEventListener("click", async () => {
+  const btn = el("btn-creer");
+  btn.disabled = true;
+  btn.textContent = "Création en cours…";
+
+  try {
+    const blocs = Array.from(document.querySelectorAll(".signataire-bloc"));
+    const tousLesTokens = [];
+    const signataires = blocs.map((bloc, index) => {
+      const token = genererToken();
+      tousLesTokens.push(token);
+      const distanceDepuisHaut = parseFloat(bloc.querySelector(".champ-position-y").value);
+      const hauteurBoite = 0.06;
+      // pdf-lib positionne les images depuis le BAS de la page (coordonnées PDF standards),
+      // alors que le formulaire raisonne depuis le HAUT (plus intuitif : "juste sous les noms").
+      // Conversion faite une seule fois ici, au moment de la création.
+      const yPctDepuisLeBas = 1 - distanceDepuisHaut - hauteurBoite;
+      return {
+        ordre: index + 1,
+        nom: bloc.querySelector(".champ-nom").value.trim(),
+        fonction: bloc.querySelector(".champ-fonction").value.trim() || "Signataire",
+        telephone: bloc.querySelector(".champ-telephone").value.trim(),
+        lienToken: token,
+        statut: "en_attente",
+        positionSignature: {
+          page: "derniere",
+          xPct: parseFloat(bloc.querySelector(".champ-position-x").value),
+          yPct: yPctDepuisLeBas,
+          largeurPct: 0.24,
+          hauteurPct: hauteurBoite
+        },
+        dateSignature: null
+      };
+    });
+
+    const dateExpiration = new Date();
+    dateExpiration.setDate(dateExpiration.getDate() + 14); // 14 jours de validité
+
+    const docRef = await addDoc(collection(db, "documents"), {
+      titre: el("input-titre").value.trim(),
+      type: el("input-type").value,
+      statutGlobal: "en_attente",
+      pdfOriginalBase64: pdfBase64Choisi,
+      pdfActuelBase64: null,
+      creePar: "Amani",
+      dateCreation: Timestamp.now(),
+      dateExpiration: Timestamp.fromDate(dateExpiration),
+      tousLesTokens: tousLesTokens,
+      signataires: signataires
+    });
+
+    afficherLiens(signataires);
+    afficherToast("Document créé avec succès !", "succes");
+    btn.textContent = "Document créé ✓";
+
+  } catch (err) {
+    console.error(err);
+    afficherToast("Erreur lors de la création. Vérifie ta connexion et réessaie.", "erreur");
+    btn.disabled = false;
+    btn.textContent = "Créer le document et générer les liens";
+  }
+});
+
+function afficherLiens(signataires) {
+  const conteneur = el("liste-liens");
+  conteneur.innerHTML = "";
+
+  signataires.forEach(s => {
+    const lien = BASE_URL_SIGNATURE + "?doc=" + s.lienToken;
+    const bloc = document.createElement("div");
+    bloc.className = "lien-signataire";
+    bloc.innerHTML = `
+      <div class="nom">${s.nom} — ${s.fonction}</div>
+      <span class="url">${lien}</span>
+      <button type="button" class="btn-copier">Copier le lien</button>
+    `;
+    bloc.querySelector(".btn-copier").addEventListener("click", () => {
+      navigator.clipboard.writeText(lien);
+      afficherToast("Lien copié !", "succes");
+    });
+    conteneur.appendChild(bloc);
+  });
+
+  el("zone-resultat").style.display = "block";
+  el("zone-resultat").scrollIntoView({ behavior: "smooth" });
+}
+
+function afficherToast(message, type) {
+  const toast = el("toast");
+  toast.textContent = message;
+  toast.className = type;
+  toast.style.display = "block";
+  setTimeout(() => { toast.style.display = "none"; }, 4000);
+}
+</script>
+
+</body>
+</html>
