@@ -153,13 +153,59 @@
   #toast.erreur { background: var(--alerte-fond); color: var(--alerte); }
 
   #chargement, #erreur { text-align: center; padding: 60px 24px; color: var(--charbon-doux); }
+
+  .logo-app { width: 30px; height: 30px; border-radius: 7px; object-fit: cover; }
+  .header-marque-ligne { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .lien-deconnexion {
+    font-size: 11px; color: var(--charbon-doux); text-decoration: underline;
+    background: none; border: none; cursor: pointer; padding: 0; margin-top: 4px;
+  }
+  #ecran-connexion {
+    min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    padding: 24px; background: linear-gradient(160deg, #f4f4f2 0%, var(--sauge-clair) 100%);
+  }
+  .carte-connexion {
+    background: var(--blanc); border-radius: 18px; box-shadow: 0 8px 32px rgba(43,43,43,0.10);
+    padding: 32px 26px; max-width: 360px; width: 100%; text-align: center;
+  }
+  .carte-connexion img { width: 64px; height: 64px; border-radius: 14px; margin-bottom: 14px; box-shadow: var(--ombre); }
+  .carte-connexion h1 { font-size: 18px; margin: 0 0 4px 0; }
+  .carte-connexion p.sous-titre-connexion { font-size: 12.5px; color: var(--charbon-doux); margin: 0 0 22px 0; }
+  .carte-connexion input {
+    width: 100%; padding: 13px 14px; border: 1px solid var(--bordure); border-radius: 10px;
+    font-size: 14px; font-family: inherit; background: #fafaf8; margin-bottom: 12px;
+  }
+  .carte-connexion button {
+    width: 100%; padding: 14px; background: var(--sauge-fonce); color: white;
+    border: none; border-radius: 10px; font-size: 14.5px; font-weight: 700; cursor: pointer;
+  }
+  #erreur-connexion { color: var(--alerte); font-size: 12.5px; margin-top: 12px; display: none; }
+  #app-contenu { display: none; }
 </style>
 </head>
 <body>
 
+<div id="ecran-connexion">
+  <div class="carte-connexion">
+    <img src="assets/logo-maphar.jpg" alt="Logo MAPHAR">
+    <h1>MAPHAR Signature</h1>
+    <p class="sous-titre-connexion">Espace administrateur — connexion requise</p>
+    <input type="email" id="input-email-connexion" placeholder="Email" autocomplete="username">
+    <input type="password" id="input-mdp-connexion" placeholder="Mot de passe" autocomplete="current-password">
+    <button type="button" id="btn-connexion">Se connecter</button>
+    <p id="erreur-connexion"></p>
+  </div>
+</div>
+
+<div id="app-contenu">
+
 <header>
-  <div class="header-marque">MAPHAR · Ajustement des signatures</div>
+  <div class="header-marque-ligne">
+    <img class="logo-app" src="assets/logo-maphar.jpg" alt="Logo MAPHAR">
+    <div class="header-marque">MAPHAR · Ajustement des signatures</div>
+  </div>
   <h1 id="titre-doc">Chargement…</h1>
+  <button type="button" class="lien-deconnexion" id="btn-deconnexion">Se déconnecter</button>
 </header>
 
 <main>
@@ -189,6 +235,8 @@
   <button id="btn-regenerer" type="button" disabled>Enregistrer les positions et régénérer le PDF</button>
 </div>
 
+</div>
+
 <div id="toast"></div>
 
 <script type="module">
@@ -197,6 +245,9 @@ import {
   getFirestore, doc, getDoc, updateDoc, collection, query, where, getDocs
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { PDFDocument } from "https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.esm.min.js";
+import {
+  getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDtJcMwK__98-v2Jz2sn5NYxe3X_pggOJU",
@@ -208,6 +259,33 @@ const firebaseConfig = {
 };
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const auth = getAuth(app);
+
+onAuthStateChanged(auth, (utilisateur) => {
+  if (utilisateur) {
+    document.getElementById("ecran-connexion").style.display = "none";
+    document.getElementById("app-contenu").style.display = "block";
+    demarrer();
+  } else {
+    document.getElementById("ecran-connexion").style.display = "flex";
+    document.getElementById("app-contenu").style.display = "none";
+  }
+});
+
+document.getElementById("btn-connexion").addEventListener("click", async () => {
+  const email = document.getElementById("input-email-connexion").value.trim();
+  const motDePasse = document.getElementById("input-mdp-connexion").value;
+  const erreur = document.getElementById("erreur-connexion");
+  erreur.style.display = "none";
+  try {
+    await signInWithEmailAndPassword(auth, email, motDePasse);
+  } catch (err) {
+    erreur.textContent = "Email ou mot de passe incorrect.";
+    erreur.style.display = "block";
+  }
+});
+
+document.getElementById("btn-deconnexion").addEventListener("click", () => signOut(auth));
 
 const el = (id) => document.getElementById(id);
 const docId = new URLSearchParams(window.location.search).get("doc");
@@ -424,7 +502,6 @@ function afficherToast(message, type) {
   setTimeout(() => { toast.style.display = "none"; }, 3500);
 }
 
-demarrer();
 </script>
 
 </body>

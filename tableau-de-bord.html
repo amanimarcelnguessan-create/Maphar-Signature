@@ -227,16 +227,151 @@
     background: var(--sauge-clair);
     color: var(--sauge-fonce);
   }
+
+  /* ===== Logo & en-tête premium ===== */
+  .logo-app {
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    object-fit: cover;
+    box-shadow: var(--ombre);
+  }
+  .header-marque-ligne { display: flex; align-items: center; gap: 8px; }
+  .lien-deconnexion {
+    font-size: 11.5px;
+    color: var(--charbon-doux);
+    text-decoration: underline;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    margin-top: 8px;
+  }
+
+  /* ===== Écran de connexion ===== */
+  #ecran-connexion {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: linear-gradient(160deg, #f4f4f2 0%, var(--sauge-clair) 100%);
+  }
+  .carte-connexion {
+    background: var(--blanc);
+    border-radius: 18px;
+    box-shadow: 0 8px 32px rgba(43,43,43,0.10);
+    padding: 32px 26px;
+    max-width: 360px;
+    width: 100%;
+    text-align: center;
+  }
+  .carte-connexion img {
+    width: 64px; height: 64px;
+    border-radius: 14px;
+    margin-bottom: 14px;
+    box-shadow: var(--ombre);
+  }
+  .carte-connexion h1 { font-size: 18px; margin: 0 0 4px 0; }
+  .carte-connexion p.sous-titre-connexion {
+    font-size: 12.5px; color: var(--charbon-doux); margin: 0 0 22px 0;
+  }
+  .carte-connexion input {
+    width: 100%;
+    padding: 13px 14px;
+    border: 1px solid var(--bordure);
+    border-radius: 10px;
+    font-size: 14px;
+    font-family: inherit;
+    background: #fafaf8;
+    margin-bottom: 12px;
+  }
+  .carte-connexion button {
+    width: 100%;
+    padding: 14px;
+    background: var(--sauge-fonce);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 14.5px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  #erreur-connexion { color: var(--alerte); font-size: 12.5px; margin-top: 12px; display: none; }
+
+  /* ===== Navigation basse ===== */
+  #nav-basse {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    background: var(--blanc);
+    border-top: 1px solid var(--bordure);
+    display: flex;
+    padding: 8px 12px calc(8px + env(safe-area-inset-bottom));
+    box-shadow: 0 -2px 12px rgba(43,43,43,0.06);
+    z-index: 15;
+  }
+  #nav-basse a {
+    flex: 1;
+    text-align: center;
+    text-decoration: none;
+    color: var(--charbon-doux);
+    font-size: 11px;
+    font-weight: 700;
+    padding: 6px 4px;
+    border-radius: 10px;
+  }
+  #nav-basse a .icone-nav { display: block; font-size: 19px; margin-bottom: 2px; }
+  #nav-basse a.actif { color: var(--sauge-fonce); background: var(--sauge-clair); }
+  body.avec-nav-basse { padding-bottom: 84px; }
+  #app-contenu { display: none; }
+
+  /* ===== Zone maintenance (réinitialisation) ===== */
+  .carte-maintenance {
+    background: var(--alerte-fond);
+    border: 1px solid #e8c9c4;
+    border-radius: var(--rayon);
+    padding: 16px;
+    margin-top: 24px;
+  }
+  .carte-maintenance h3 { font-size: 13.5px; color: var(--alerte); margin: 0 0 8px 0; }
+  .carte-maintenance p { font-size: 12px; color: var(--charbon-doux); margin: 0 0 10px 0; }
+  .btn-danger {
+    background: var(--alerte);
+    color: white;
+    border: none;
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 12.5px;
+    font-weight: 700;
+    cursor: pointer;
+  }
 </style>
 </head>
 <body>
 
+<div id="ecran-connexion">
+  <div class="carte-connexion">
+    <img src="assets/logo-maphar.jpg" alt="Logo MAPHAR">
+    <h1>MAPHAR Signature</h1>
+    <p class="sous-titre-connexion">Espace administrateur — connexion requise</p>
+    <input type="email" id="input-email-connexion" placeholder="Email" autocomplete="username">
+    <input type="password" id="input-mdp-connexion" placeholder="Mot de passe" autocomplete="current-password">
+    <button type="button" id="btn-connexion">Se connecter</button>
+    <p id="erreur-connexion"></p>
+  </div>
+</div>
+
+<div id="app-contenu">
+
 <header>
-  <div class="header-marque">MAPHAR · Signature électronique</div>
+  <div class="header-marque-ligne">
+    <img class="logo-app" src="assets/logo-maphar.jpg" alt="Logo MAPHAR">
+    <div class="header-marque">MAPHAR · Signature électronique</div>
+  </div>
   <div class="header-ligne">
     <h1>Tableau de bord</h1>
-    <a class="lien-nav" href="creer-document.html">+ Nouveau document</a>
   </div>
+  <button type="button" class="lien-deconnexion" id="btn-deconnexion">Se déconnecter</button>
 </header>
 
 <main>
@@ -257,15 +392,31 @@
     <div class="icone">📄</div>
     <p>Aucun document dans cette catégorie.</p>
   </div>
+
+  <div class="carte-maintenance">
+    <h3>⚠️ Zone de maintenance</h3>
+    <p>Supprime définitivement TOUS les documents et signatures enregistrés. Action irréversible — à utiliser uniquement pour repartir de zéro après des tests.</p>
+    <button type="button" class="btn-danger" id="btn-reinitialiser">Supprimer toutes les données</button>
+  </div>
 </main>
+
+<nav id="nav-basse">
+  <a href="creer-document.html"><span class="icone-nav">➕</span>Créer</a>
+  <a href="tableau-de-bord.html" class="actif"><span class="icone-nav">📋</span>Tableau de bord</a>
+</nav>
+
+</div>
 
 <div id="toast"></div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
-  getFirestore, collection, getDocs, query, orderBy, doc, updateDoc
+  getFirestore, collection, getDocs, query, orderBy, doc, updateDoc, deleteDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import {
+  getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDtJcMwK__98-v2Jz2sn5NYxe3X_pggOJU",
@@ -277,6 +428,38 @@ const firebaseConfig = {
 };
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const auth = getAuth(app);
+
+// ============================================================
+// GARDE D'AUTHENTIFICATION
+// ============================================================
+onAuthStateChanged(auth, (utilisateur) => {
+  if (utilisateur) {
+    el("ecran-connexion").style.display = "none";
+    el("app-contenu").style.display = "block";
+    document.body.classList.add("avec-nav-basse");
+    chargerDocuments();
+  } else {
+    el("ecran-connexion").style.display = "flex";
+    el("app-contenu").style.display = "none";
+    document.body.classList.remove("avec-nav-basse");
+  }
+});
+
+document.getElementById("btn-connexion").addEventListener("click", async () => {
+  const email = document.getElementById("input-email-connexion").value.trim();
+  const motDePasse = document.getElementById("input-mdp-connexion").value;
+  const erreur = document.getElementById("erreur-connexion");
+  erreur.style.display = "none";
+  try {
+    await signInWithEmailAndPassword(auth, email, motDePasse);
+  } catch (err) {
+    erreur.textContent = "Email ou mot de passe incorrect.";
+    erreur.style.display = "block";
+  }
+});
+
+document.getElementById("btn-deconnexion").addEventListener("click", () => signOut(auth));
 
 // ⚠️ À adapter si ton dépôt GitHub Pages a une URL différente
 const BASE_URL_SIGNATURE = "https://amanimarcelnguessan-create.github.io/Maphar-Signature/signer.html";
@@ -488,7 +671,43 @@ function afficherToast(message) {
   setTimeout(() => { toast.style.display = "none"; }, 3500);
 }
 
-chargerDocuments();
+// ============================================================
+// RÉINITIALISATION TOTALE (zone de maintenance)
+// ============================================================
+el("btn-reinitialiser").addEventListener("click", async () => {
+  const premiereConfirmation = confirm(
+    "⚠️ Ceci va supprimer DÉFINITIVEMENT tous les documents et signatures enregistrés. Continuer ?"
+  );
+  if (!premiereConfirmation) return;
+
+  const saisie = prompt('Pour confirmer, tape exactement : SUPPRIMER');
+  if (saisie !== "SUPPRIMER") {
+    afficherToast("Réinitialisation annulée.");
+    return;
+  }
+
+  const btn = el("btn-reinitialiser");
+  btn.disabled = true;
+  btn.textContent = "Suppression en cours…";
+
+  try {
+    const snapDocs = await getDocs(collection(db, "documents"));
+    for (const d of snapDocs.docs) await deleteDoc(doc(db, "documents", d.id));
+
+    const snapSignatures = await getDocs(collection(db, "signatures"));
+    for (const s of snapSignatures.docs) await deleteDoc(doc(db, "signatures", s.id));
+
+    afficherToast("Toutes les données ont été supprimées.");
+    btn.textContent = "Supprimer toutes les données";
+    btn.disabled = false;
+    await chargerDocuments();
+  } catch (err) {
+    console.error(err);
+    afficherToast("Échec de la suppression. Réessaie.");
+    btn.disabled = false;
+    btn.textContent = "Supprimer toutes les données";
+  }
+});
 </script>
 
 </body>

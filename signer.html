@@ -317,7 +317,10 @@
 <body>
 
 <header>
-  <div class="header-marque">MAPHAR · Signature électronique sécurisée</div>
+  <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+    <img src="assets/logo-maphar.jpg" alt="Logo MAPHAR" style="width:28px; height:28px; border-radius:7px; object-fit:cover;">
+    <div class="header-marque" style="margin-bottom:0;">Signature électronique sécurisée</div>
+  </div>
   <h1 id="titre-doc">Chargement du document…</h1>
   <p class="sous-titre" id="sous-titre"></p>
   <p id="ordre-info"></p>
@@ -365,6 +368,12 @@
     <div class="icone">✅</div>
     <h2 id="message-final-titre">Document signé avec succès</h2>
     <p>Merci. Une copie signée est conservée par MAPHAR.<br>Vous pouvez fermer cette page en toute sécurité.</p>
+    <button type="button" id="btn-fermer-page" style="margin-top:18px; padding:13px 28px; background:var(--sauge-fonce); color:white; border:none; border-radius:8px; font-size:14px; font-weight:700; cursor:pointer;">
+      Fermer cette page
+    </button>
+    <p id="note-fermeture-manuelle" style="display:none; font-size:12px; color:var(--charbon-doux); margin-top:10px;">
+      Votre navigateur ne permet pas la fermeture automatique — vous pouvez fermer l'onglet manuellement.
+    </p>
   </div>
 
   <div id="erreur" class="ecran-message">
@@ -775,6 +784,16 @@ function afficherSucces() {
   el("statut-badge").textContent = "Signé";
   el("statut-badge").className = "badge-signe";
 }
+
+// Tente de fermer l'onglet automatiquement. Les navigateurs mobiles
+// bloquent souvent window.close() sur un onglet ouvert par l'utilisateur
+// (via un lien WhatsApp, par exemple) — d'où le message de repli.
+document.getElementById("btn-fermer-page").addEventListener("click", () => {
+  window.close();
+  setTimeout(() => {
+    document.getElementById("note-fermeture-manuelle").style.display = "block";
+  }, 400);
+});
 
 function afficherDejaSigne() {
   el("message-final-titre").textContent = "Vous avez déjà signé ce document";
