@@ -9,6 +9,7 @@
 <title>Tableau de bord — MAPHAR Signature</title>
 <meta name="theme-color" content="#4a6b4d">
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" defer></script>
 <style>
   :root {
     --blanc: #ffffff;
@@ -252,6 +253,12 @@
     <a href="document-creer.html" class="btn-creer-vide">+ Créer un document</a>
   </div>
 
+  <div class="carte-maintenance" style="background:var(--sauge-clair); border-color:var(--sauge);">
+    <h3 style="color:var(--sauge-fonce);">📦 Export groupé</h3>
+    <p>Télécharge en une fois tous les PDF signés du mois en cours, dans une archive ZIP.</p>
+    <button type="button" class="btn-danger" style="background:var(--sauge-fonce);" id="btn-export-mensuel">Exporter le mois en cours</button>
+  </div>
+
   <div class="carte-maintenance">
     <h3>⚠️ Zone de maintenance</h3>
     <p>Supprime définitivement TOUS les documents et signatures enregistrés. Action irréversible.</p>
@@ -378,6 +385,11 @@ function construireCarte(d) {
   const nbTotal = d.signataires.length;
   const pourcentage = nbTotal > 0 ? Math.round((nbSignes / nbTotal) * 100) : 0;
 
+  // Badge "en retard" : document en attente depuis plus de 3 jours (relance visuelle,
+  // pas d'email automatique — voir explication sur les limites de notifications)
+  const joursEcoules = d.dateCreation ? (Date.now() - d.dateCreation.toDate().getTime()) / (1000 * 60 * 60 * 24) : 0;
+  const enRetard = d.statutGlobal === "en_attente" && joursEcoules > 3;
+
   carte.innerHTML = `
     <div class="ligne-titre">
       <h3>${d.titre}</h3>
@@ -385,10 +397,18 @@ function construireCarte(d) {
     </div>
     <div class="meta-doc">
       ${libelleType(d.type)} · Créé le ${formaterDate(d.dateCreation)}
+      ${enRetard ? '<span style="color:var(--alerte); font-weight:700;"> · ⏰ En retard, pense à relancer</span>' : ''}
     </div>
     <div class="progression-signatures"><div class="rempli" style="width:${pourcentage}%"></div></div>
     <div class="liste-signataires"></div>
   `;
+
+  if (d.statutGlobal === "signe" && d.empreinteSHA256) {
+    const empreinte = document.createElement("div");
+    empreinte.style.cssText = "font-size:10.5px; color:var(--charbon-doux); font-family:monospace; margin-top:8px; word-break:break-all; background:#f7f7f4; padding:8px 10px; border-radius:8px;";
+    empreinte.innerHTML = `🔒 Empreinte SHA-256 : ${d.empreinteSHA256}`;
+    carte.appendChild(empreinte);
+  }
 
   const listeSign = carte.querySelector(".liste-signataires");
   d.signataires.slice().sort((a, b) => a.ordre - b.ordre).forEach(s => {
@@ -508,6 +528,58 @@ function afficherToast(message) {
   toast.style.display = "block";
   setTimeout(() => { toast.style.display = "none"; }, 3500);
 }
+
+// ============================================================
+// EXPORT GROUPÉ MENSUEL (ZIP)
+// ============================================================
+el("btn-export-mensuel").addEventListener("click", async () => {
+  const btn = el("btn-export-mensuel");
+  btn.disabled = true;
+  btn.textContent = "Préparation de l'archive…";
+
+  try {
+    const maintenant = new Date();
+    const moisEnCours = maintenant.getMonth();
+    const anneeEnCours = maintenant.getFullYear();
+
+    const documentsDuMois = tousLesDocuments.filter(d => {
+      if (d.statutGlobal !== "signe" || !d.pdfActuelBase64 || !d.dateCreation) return false;
+      const date = d.dateCreation.toDate();
+      return date.getMonth() === moisEnCours && date.getFullYear() === anneeEnCours;
+    });
+
+    if (documentsDuMois.length === 0) {
+      afficherToast("Aucun document signé ce mois-ci.");
+      btn.disabled = false;
+      btn.textContent = "Exporter le mois en cours";
+      return;
+    }
+
+    const zip = new JSZip();
+    documentsDuMois.forEach(d => {
+      const nomFichier = d.titre.replace(/[^a-z0-9]/gi, "_") + ".pdf";
+      zip.file(nomFichier, base64VersArrayBuffer(d.pdfActuelBase64));
+    });
+
+    const contenuZip = await zip.generateAsync({ type: "blob" });
+    const url = URL.createObjectURL(contenuZip);
+    const lien = document.createElement("a");
+    lien.href = url;
+    lien.download = `MAPHAR_signatures_${anneeEnCours}-${String(moisEnCours + 1).padStart(2, "0")}.zip`;
+    document.body.appendChild(lien);
+    lien.click();
+    lien.remove();
+    URL.revokeObjectURL(url);
+
+    afficherToast(`${documentsDuMois.length} document(s) exporté(s).`);
+  } catch (err) {
+    console.error(err);
+    afficherToast("Échec de l'export. Réessaie.");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Exporter le mois en cours";
+  }
+});
 
 el("btn-reinitialiser").addEventListener("click", async () => {
   const premiereConfirmation = confirm(

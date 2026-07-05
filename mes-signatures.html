@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Mes signatures — MAPHAR</title>
+<meta name="theme-color" content="#4a6b4d">
+
+<style>
+  :root {
+    --blanc: #ffffff;
+    --sauge: #7d9a7f;
+    --sauge-clair: #e3ecdf;
+    --sauge-fonce: #4a6b4d;
+    --charbon: #22261f;
+    --charbon-doux: #6b7b6f;
+    --bordure: #e5e5e0;
+    --alerte: #a34a4a;
+    --alerte-fond: #f7e9e7;
+    --rayon: 16px;
+    --ombre: 0 2px 14px rgba(34, 38, 31, 0.06);
+    --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+    background: #f6f6f3;
+    color: var(--charbon);
+    -webkit-font-smoothing: antialiased;
+  }
+  header {
+    background: var(--blanc);
+    padding: 18px 20px;
+    border-bottom: 1px solid var(--bordure);
+    text-align: center;
+  }
+  header img { width: 44px; height: 44px; border-radius: 10px; margin-bottom: 10px; }
+  header h1 { font-size: 17px; margin: 0 0 4px 0; }
+  header p { font-size: 12.5px; color: var(--charbon-doux); margin: 0; }
+
+  main { max-width: 480px; margin: 0 auto; padding: 20px 16px 60px 16px; }
+
+  .carte {
+    background: var(--blanc);
+    border: 1px solid var(--bordure);
+    border-radius: var(--rayon);
+    box-shadow: var(--ombre);
+    padding: 22px;
+  }
+  label { display: block; font-size: 12.5px; font-weight: 700; color: var(--charbon-doux); margin-bottom: 8px; }
+  input[type="tel"] {
+    width: 100%;
+    padding: 14px;
+    border: 1.5px solid var(--bordure);
+    border-radius: 11px;
+    font-size: 15px;
+    font-family: inherit;
+    background: #fafaf8;
+  }
+  input[type="tel"]:focus { outline: none; border-color: var(--sauge); background: white; }
+  button {
+    width: 100%;
+    padding: 14px;
+    margin-top: 14px;
+    background: var(--sauge-fonce);
+    color: white;
+    border: none;
+    border-radius: 11px;
+    font-size: 14.5px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  button:disabled { background: #cdd6ce; }
+
+  .avertissement {
+    font-size: 11.5px;
+    color: var(--charbon-doux);
+    margin-top: 14px;
+    line-height: 1.5;
+    background: #f7f7f4;
+    padding: 10px 12px;
+    border-radius: 10px;
+  }
+
+  #resultats { margin-top: 18px; display: none; }
+  .ligne-doc {
+    background: var(--blanc);
+    border: 1px solid var(--bordure);
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 10px;
+    box-shadow: var(--ombre);
+  }
+  .ligne-doc .titre { font-weight: 700; font-size: 14px; margin-bottom: 4px; }
+  .ligne-doc .meta { font-size: 12px; color: var(--charbon-doux); }
+  .ligne-doc .fonction { font-size: 11.5px; color: var(--sauge-fonce); font-weight: 600; margin-top: 4px; }
+
+  #etat-vide, #erreur-recherche {
+    display: none;
+    text-align: center;
+    padding: 30px 10px;
+    color: var(--charbon-doux);
+    font-size: 13px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <img src="logo-maphar.jpg" alt="Logo MAPHAR">
+  <h1>Mes documents signés</h1>
+  <p>MAPHAR — Mutuelle Pour l'Assurance des Pharmaciens</p>
+</header>
+
+<main>
+  <div class="carte">
+    <label for="input-telephone">Ton numéro de téléphone</label>
+    <input type="tel" id="input-telephone" placeholder="Ex : +225 07 00 00 00 00">
+    <button type="button" id="btn-rechercher">Voir mes documents</button>
+    <p class="avertissement">
+      ⚠️ Cette page affiche uniquement le <strong>titre</strong> et la <strong>date de signature</strong> de tes documents — jamais leur contenu. Elle vérifie le numéro saisi mais ne demande pas de code de confirmation par SMS.
+    </p>
+  </div>
+
+  <div id="resultats"></div>
+  <div id="etat-vide">Aucun document signé trouvé pour ce numéro.</div>
+  <div id="erreur-recherche">Une erreur est survenue. Vérifie ta connexion et réessaie.</div>
+</main>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {
+  getFirestore, collection, query, where, getDocs
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDtJcMwK__98-v2Jz2sn5NYxe3X_pggOJU",
+  authDomain: "maphar-signature.firebaseapp.com",
+  projectId: "maphar-signature",
+  storageBucket: "maphar-signature.firebasestorage.app",
+  messagingSenderId: "358074386051",
+  appId: "1:358074386051:web:4853079df71268ae2bfdb6"
+};
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const el = (id) => document.getElementById(id);
+
+function formaterDate(timestamp) {
+  if (!timestamp) return "—";
+  const d = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+  return d.toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" }) +
+    " à " + d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+}
+
+el("btn-rechercher").addEventListener("click", async () => {
+  const brut = el("input-telephone").value.trim();
+  const telephone = brut.replace(/[^0-9+]/g, "");
+  if (!telephone) return;
+
+  const btn = el("btn-rechercher");
+  btn.disabled = true;
+  btn.textContent = "Recherche…";
+  el("resultats").style.display = "none";
+  el("etat-vide").style.display = "none";
+  el("erreur-recherche").style.display = "none";
+
+  try {
+    const q = query(collection(db, "documents"), where("tousLesTelephones", "array-contains", telephone));
+    const snapshot = await getDocs(q);
+
+    const resultats = [];
+    snapshot.forEach(docSnap => {
+      const data = docSnap.data();
+      const monEntree = data.signataires.find(s =>
+        s.telephone && s.telephone.replace(/[^0-9+]/g, "") === telephone && s.statut === "signe"
+      );
+      if (monEntree) {
+        resultats.push({ titre: data.titre, fonction: monEntree.fonction, date: monEntree.dateSignature });
+      }
+    });
+
+    resultats.sort((a, b) => (b.date?.toMillis?.() || 0) - (a.date?.toMillis?.() || 0));
+
+    if (resultats.length === 0) {
+      el("etat-vide").style.display = "block";
+    } else {
+      const conteneur = el("resultats");
+      conteneur.innerHTML = "";
+      resultats.forEach(r => {
+        const ligne = document.createElement("div");
+        ligne.className = "ligne-doc";
+        ligne.innerHTML = `
+          <div class="titre">${r.titre}</div>
+          <div class="meta">Signé le ${formaterDate(r.date)}</div>
+          <div class="fonction">${r.fonction}</div>
+        `;
+        conteneur.appendChild(ligne);
+      });
+      conteneur.style.display = "block";
+    }
+
+  } catch (err) {
+    console.error(err);
+    el("erreur-recherche").style.display = "block";
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Voir mes documents";
+  }
+});
+</script>
+
+</body>
+</html>

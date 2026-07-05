@@ -410,9 +410,9 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
   getFirestore, collection, query, where, getDocs, limit,
-  updateDoc, addDoc, Timestamp
+  updateDoc, addDoc, Timestamp, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { PDFDocument } from "https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.esm.min.js";
+import { PDFDocument, StandardFonts, rgb } from "https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.esm.min.js";
 // Pas de Firebase Storage : le PDF est stocké directement dans Firestore
 // (encodé en base64), pour rester sur le forfait 100% gratuit "Spark".
 // pdf-lib sert à fusionner l'image de signature DANS le PDF existant.
@@ -747,11 +747,11 @@ async function validerSignature() {
       height: pos.hauteurPct * hauteurPage
     });
 
-    // 4. Ré-enregistrer le PDF fusionné en base64
-    const nouveauxBytes = await pdfDoc.save();
-    const nouveauPdfBase64 = arrayBufferVersBase64(nouveauxBytes);
-
-    // 5. Mettre à jour le tableau signataires[] : marquer CE signataire comme "signe"
+    // 4. Mettre à jour le tableau signataires[] : marquer CE signataire comme "signe"
+    // Note technique : Firestore n'autorise pas serverTimestamp() À L'INTÉRIEUR
+    // d'un tableau (limitation connue), donc cette date précise reste basée sur
+    // l'horloge du téléphone. La preuve la plus solide (horodatage SERVEUR) est
+    // stockée séparément dans la collection "signatures" un peu plus bas.
     const maintenant = Timestamp.now();
     const nouveauxSignataires = etat.documentData.signataires.map(s =>
       s.lienToken === etat.signataireCourant.lienToken
@@ -760,23 +760,39 @@ async function validerSignature() {
     );
     const tousOntSigne = nouveauxSignataires.every(s => s.statut === "signe");
 
+    // 5. Si c'est la DERNIÈRE signature, on ajoute une page de certificat
+    // récapitulant qui a signé et quand — pratique standard (à la DocuSign)
+    // qui renforce la valeur probante du document final.
+    if (tousOntSigne) {
+      await ajouterPageCertificat(pdfDoc, nouveauxSignataires, largeurPage, hauteurPage);
+    }
+
+    // 6. Ré-enregistrer le PDF fusionné, puis calculer son empreinte SHA-256
+    // (permet à quiconque de vérifier plus tard que le fichier n'a pas été
+    // altéré, en recalculant l'empreinte et en la comparant).
+    const nouveauxBytes = await pdfDoc.save();
+    const nouveauPdfBase64 = arrayBufferVersBase64(nouveauxBytes);
+    const empreinteSHA256 = await calculerEmpreinteSHA256(nouveauxBytes);
+
     await updateDoc(etat.documentRef, {
       signataires: nouveauxSignataires,
       pdfActuelBase64: nouveauPdfBase64,
-      statutGlobal: tousOntSigne ? "signe" : "en_attente"
+      statutGlobal: tousOntSigne ? "signe" : "en_attente",
+      empreinteSHA256
     });
 
-    // 6. Trace d'audit séparée (preuve horodatée, indépendante du document)
-    // On conserve aussi l'image brute de la signature : utile comme preuve
-    // indépendante du PDF, et permet de re-générer le document si jamais
-    // la position doit être corrigée après coup.
+    // 7. Trace d'audit séparée (preuve horodatée CÔTÉ SERVEUR, indépendante
+    // du document — c'est ici la preuve juridiquement la plus solide, puisque
+    // ce champ n'est pas modifiable ni falsifiable depuis le téléphone).
+    // On conserve aussi l'image brute de la signature, utile pour un
+    // repositionnement futur sans devoir re-signer.
     await addDoc(collection(db, "signatures"), {
       documentId: etat.documentRef.id,
       lienToken: etat.signataireCourant.lienToken,
       ordre: etat.signataireCourant.ordre,
       nomSignataire: etat.signataireCourant.nom,
       fonctionSignataire: etat.signataireCourant.fonction,
-      horodatage: maintenant,
+      horodatage: serverTimestamp(),
       userAgent: navigator.userAgent,
       signatureImageBase64: signaturePngBase64,
       consentement: true
@@ -790,6 +806,71 @@ async function validerSignature() {
     btnValider.disabled = false;
     btnValider.textContent = "Valider ma signature";
   }
+}
+
+// ============================================================
+// PAGE DE CERTIFICAT — ajoutée uniquement quand TOUS les
+// signataires ont validé. Résume qui a signé et quand.
+// ============================================================
+async function ajouterPageCertificat(pdfDoc, signataires, largeurPage, hauteurPage) {
+  const page = pdfDoc.addPage([largeurPage, hauteurPage]);
+  const police = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const policeGrasse = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+  const vertSauge = rgb(0.29, 0.42, 0.30);
+  const gris = rgb(0.42, 0.48, 0.44);
+
+  let y = hauteurPage - 70;
+  page.drawText("Certificat de signature électronique", {
+    x: 50, y, size: 16, font: policeGrasse, color: vertSauge
+  });
+  y -= 30;
+  page.drawText("MAPHAR — Mutuelle Pour l'Assurance des Pharmaciens", {
+    x: 50, y, size: 10, font: police, color: gris
+  });
+  y -= 40;
+  page.drawText("Signataires :", { x: 50, y, size: 11, font: policeGrasse, color: rgb(0.13, 0.15, 0.12) });
+  y -= 22;
+
+  signataires.slice().sort((a, b) => a.ordre - b.ordre).forEach(s => {
+    const dateTexte = s.dateSignature && s.dateSignature.toDate
+      ? s.dateSignature.toDate().toLocaleString("fr-FR", { dateStyle: "long", timeStyle: "short" })
+      : "—";
+    page.drawText(`• ${s.nom} (${s.fonction})`, { x: 60, y, size: 10.5, font: policeGrasse });
+    y -= 15;
+    page.drawText(`  Signé le ${dateTexte}`, { x: 60, y, size: 10, font: police, color: gris });
+    y -= 22;
+  });
+
+  y -= 10;
+  page.drawText(
+    "Ce document a été signé électroniquement conformément à la Loi N°2013-546",
+    { x: 50, y, size: 9, font: police, color: gris }
+  );
+  y -= 13;
+  page.drawText(
+    "relative aux transactions électroniques (Côte d'Ivoire). Chaque signature est",
+    { x: 50, y, size: 9, font: police, color: gris }
+  );
+  y -= 13;
+  page.drawText(
+    "horodatée et tracée. L'empreinte numérique du document final est disponible",
+    { x: 50, y, size: 9, font: police, color: gris }
+  );
+  y -= 13;
+  page.drawText(
+    "dans le tableau de bord administrateur MAPHAR Signature.",
+    { x: 50, y, size: 9, font: police, color: gris }
+  );
+}
+
+// ============================================================
+// EMPREINTE SHA-256 — permet de vérifier plus tard que le PDF
+// téléchargé est identique bit pour bit à celui réellement signé.
+// ============================================================
+async function calculerEmpreinteSHA256(bytes) {
+  const hashBuffer = await crypto.subtle.digest("SHA-256", bytes);
+  const octets = Array.from(new Uint8Array(hashBuffer));
+  return octets.map(o => o.toString(16).padStart(2, "0")).join("");
 }
 
 // ============================================================

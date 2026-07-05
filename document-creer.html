@@ -506,7 +506,7 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
-  getFirestore, collection, addDoc, Timestamp
+  getFirestore, collection, addDoc, Timestamp, getDocs, setDoc, doc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import {
   getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut
@@ -536,6 +536,7 @@ onAuthStateChanged(auth, (utilisateur) => {
     el("ecran-connexion").style.display = "none";
     el("app-contenu").style.display = "block";
     document.body.classList.add("avec-nav-basse");
+    chargerAnnuaire();
   } else {
     el("ecran-connexion").style.display = "flex";
     el("app-contenu").style.display = "none";
@@ -563,6 +564,33 @@ let etapeCourante = 1;
 let compteurSignataires = 0;
 let pdfBase64Choisi = null;
 let nomFichierChoisi = "";
+let annuaireCache = [];
+
+// ============================================================
+// ANNUAIRE DES SIGNATAIRES RÉCURRENTS
+// ============================================================
+async function chargerAnnuaire() {
+  try {
+    const snapshot = await getDocs(collection(db, "annuaire"));
+    annuaireCache = snapshot.docs.map(d => d.data());
+    // Met à jour les datalists déjà présentes à l'écran (ex: 1er signataire par défaut)
+    document.querySelectorAll(".signataire-bloc datalist").forEach(remplirDatalistAnnuaire);
+  } catch (err) {
+    console.error("Annuaire indisponible :", err);
+  }
+}
+
+// Ajoute/actualise une entrée annuaire (appelé après la création d'un document)
+async function memoriserDansAnnuaire(nom, telephone, fonction) {
+  if (!telephone) return; // le téléphone sert de clé, sans lui on ne peut pas fusionner proprement
+  const idPropre = telephone.replace(/[^0-9+]/g, "");
+  if (!idPropre) return;
+  try {
+    await setDoc(doc(db, "annuaire", idPropre), { nom, telephone, fonctionHabituelle: fonction }, { merge: true });
+  } catch (err) {
+    console.error("Échec mémorisation annuaire :", err);
+  }
+}
 
 function allerAEtape(numero) {
   document.querySelectorAll(".panneau-etape").forEach(p => p.classList.remove("actif"));
@@ -638,12 +666,14 @@ function fichierVersBase64(fichier) {
 // ============================================================
 function ajouterBlocSignataire() {
   compteurSignataires++;
+  const idListe = "annuaire-liste-" + compteurSignataires;
   const bloc = document.createElement("div");
   bloc.className = "signataire-bloc";
   bloc.innerHTML = `
     <span class="numero">Signataire ${document.querySelectorAll('.signataire-bloc').length + 1}</span>
     <label>Nom complet</label>
-    <input type="text" class="champ-nom" placeholder="Ex : Dr. KOFFI Emmanuel">
+    <input type="text" class="champ-nom" list="${idListe}" placeholder="Ex : Dr. KOFFI Emmanuel" autocomplete="off">
+    <datalist id="${idListe}"></datalist>
     <label>Fonction (pour ce document précis)</label>
     <input type="text" class="champ-fonction" placeholder="Ex : Président de Séance">
     <label>Téléphone (WhatsApp)</label>
@@ -669,8 +699,21 @@ function ajouterBlocSignataire() {
     verifierEtapeValide();
   });
   bloc.querySelectorAll("input").forEach(champ => champ.addEventListener("input", verifierEtapeValide));
+
+  // Autocomplétion : dès qu'on choisit un nom déjà connu, on pré-remplit le téléphone
+  const champNom = bloc.querySelector(".champ-nom");
+  const champTelephone = bloc.querySelector(".champ-telephone");
+  champNom.addEventListener("input", () => {
+    const trouve = annuaireCache.find(a => a.nom === champNom.value.trim());
+    if (trouve && !champTelephone.value) champTelephone.value = trouve.telephone || "";
+  });
+  remplirDatalistAnnuaire(bloc.querySelector("datalist"));
+
   el("liste-signataires").appendChild(bloc);
   verifierEtapeValide();
+}
+function remplirDatalistAnnuaire(datalistEl) {
+  datalistEl.innerHTML = annuaireCache.map(a => `<option value="${a.nom}">`).join("");
 }
 function renumeroterBlocs() {
   document.querySelectorAll(".signataire-bloc").forEach((bloc, index) => {
@@ -720,16 +763,19 @@ async function creerDocument() {
   try {
     const blocs = Array.from(document.querySelectorAll(".signataire-bloc"));
     const tousLesTokens = [];
+    const tousLesTelephones = [];
     const signataires = blocs.map((bloc, index) => {
       const token = genererToken();
       tousLesTokens.push(token);
+      const telephone = bloc.querySelector(".champ-telephone").value.trim();
+      if (telephone) tousLesTelephones.push(telephone.replace(/[^0-9+]/g, ""));
       const distanceDepuisHaut = parseFloat(bloc.querySelector(".champ-position-y").value);
       const hauteurBoite = 0.06;
       return {
         ordre: index + 1,
         nom: bloc.querySelector(".champ-nom").value.trim(),
         fonction: bloc.querySelector(".champ-fonction").value.trim() || "Signataire",
-        telephone: bloc.querySelector(".champ-telephone").value.trim(),
+        telephone,
         lienToken: token,
         statut: "en_attente",
         positionSignature: {
@@ -756,8 +802,12 @@ async function creerDocument() {
       dateCreation: Timestamp.now(),
       dateExpiration: Timestamp.fromDate(dateExpiration),
       tousLesTokens,
+      tousLesTelephones,
       signataires
     });
+
+    // Alimente l'annuaire pour accélérer la prochaine création (silencieux, non bloquant)
+    signataires.forEach(s => memoriserDansAnnuaire(s.nom, s.telephone, s.fonction));
 
     afficherEcranSucces(signataires);
     lancerConfettis();
