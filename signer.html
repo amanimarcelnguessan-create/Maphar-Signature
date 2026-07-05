@@ -198,6 +198,15 @@
     touch-action: none;
     position: relative;
   }
+  #ligne-guide-signature {
+    position: absolute;
+    left: 8%;
+    right: 8%;
+    bottom: 32%;
+    height: 1px;
+    background: repeating-linear-gradient(to right, #c9c2b0 0, #c9c2b0 6px, transparent 6px, transparent 11px);
+    pointer-events: none;
+  }
   #pad-placeholder {
     position: absolute;
     inset: 0;
@@ -342,6 +351,7 @@
     </p>
     <div id="pad-wrapper">
       <span id="pad-placeholder">Signez ici avec votre doigt</span>
+      <div id="ligne-guide-signature"></div>
       <canvas id="signature-pad"></canvas>
     </div>
     <div id="consentement">
@@ -677,7 +687,10 @@ function initSignaturePad() {
 
   etat.pad = new window.SignaturePad(canvas, {
     backgroundColor: "rgba(0,0,0,0)",
-    penColor: "rgb(20,40,25)"
+    penColor: "rgb(21, 46, 130)",
+    minWidth: 0.7,
+    maxWidth: 2.6,
+    velocityFilterWeight: 0.75
   });
 
   const checkbox = el("check-consentement");
