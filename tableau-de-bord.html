@@ -12,7 +12,8 @@
     --sauge: #7d9a7f;
     --sauge-clair: #e3ecdf;
     --sauge-fonce: #4a6b4d;
-    --charbon: #2b2b2b;
+    --sauge-fonce-hover: #3d5940;
+    --charbon: #22261f;
     --charbon-doux: #6b7b6f;
     --or-champagne: #c9a968;
     --bordure: #e5e5e0;
@@ -20,330 +21,155 @@
     --alerte-fond: #f7e9e7;
     --attente-fond: #fdf2d0;
     --attente-texte: #8a6d1a;
-    --rayon: 12px;
-    --ombre: 0 2px 12px rgba(43, 43, 43, 0.06);
+    --rayon: 16px;
+    --rayon-lg: 22px;
+    --ombre: 0 2px 14px rgba(34, 38, 31, 0.06);
+    --ombre-lg: 0 12px 40px rgba(34, 38, 31, 0.12);
+    --ease: cubic-bezier(0.22, 1, 0.36, 1);
   }
-  * { box-sizing: border-box; }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
   body {
     margin: 0;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
-    background: #f4f4f2;
+    background: #f6f6f3;
     color: var(--charbon);
-    padding-bottom: 40px;
-  }
-  header {
-    background: var(--blanc);
-    padding: 18px 20px;
-    border-bottom: 1px solid var(--bordure);
-    position: sticky;
-    top: 0;
-    z-index: 10;
-  }
-  .header-marque {
-    font-size: 11px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--sauge-fonce);
-    font-weight: 700;
-    margin-bottom: 6px;
-  }
-  .header-ligne {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 10px;
-  }
-  header h1 { font-size: 18px; margin: 0; }
-  .lien-nav {
-    font-size: 12.5px;
-    font-weight: 700;
-    color: var(--sauge-fonce);
-    text-decoration: none;
-    background: var(--sauge-clair);
-    padding: 8px 12px;
-    border-radius: 8px;
-    white-space: nowrap;
+    -webkit-font-smoothing: antialiased;
   }
 
-  main { max-width: 720px; margin: 0 auto; padding: 16px; }
-
-  .barre-filtres {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 16px;
-    overflow-x: auto;
+  #ecran-connexion {
+    min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    padding: 24px;
+    background: linear-gradient(150deg, #eef1ec 0%, var(--sauge-clair) 55%, #dce9dd 100%);
+    background-size: 200% 200%; animation: flux-fond 12s ease infinite;
   }
+  @keyframes flux-fond { 0%, 100% { background-position: 0% 0%; } 50% { background-position: 100% 100%; } }
+  .carte-connexion {
+    background: var(--blanc); border-radius: var(--rayon-lg); box-shadow: var(--ombre-lg);
+    padding: 36px 28px; max-width: 370px; width: 100%; text-align: center;
+    animation: apparition-carte 0.6s var(--ease) both;
+  }
+  @keyframes apparition-carte { from { opacity: 0; transform: translateY(18px) scale(0.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
+  .carte-connexion img { width: 68px; height: 68px; border-radius: 16px; margin-bottom: 16px; box-shadow: var(--ombre); animation: respiration 3.5s ease-in-out infinite; }
+  @keyframes respiration { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.045); } }
+  .carte-connexion h1 { font-size: 19px; margin: 0 0 4px 0; letter-spacing: -0.01em; }
+  .carte-connexion p.sous-titre-connexion { font-size: 12.5px; color: var(--charbon-doux); margin: 0 0 24px 0; }
+  .carte-connexion input {
+    width: 100%; padding: 15px 16px; border: 1.5px solid var(--bordure); border-radius: 12px;
+    font-size: 14.5px; font-family: inherit; background: #fafaf8; margin-bottom: 14px;
+    transition: border-color 0.2s var(--ease), background 0.2s var(--ease);
+  }
+  .carte-connexion input:focus { outline: none; border-color: var(--sauge); background: white; }
+  .carte-connexion button {
+    width: 100%; padding: 15px; background: var(--sauge-fonce); color: white; border: none;
+    border-radius: 12px; font-size: 14.5px; font-weight: 700; cursor: pointer; transition: transform 0.1s, background 0.15s;
+  }
+  .carte-connexion button:active { transform: scale(0.98); background: var(--sauge-fonce-hover); }
+  #erreur-connexion { color: var(--alerte); font-size: 12.5px; margin-top: 14px; display: none; animation: secousse 0.4s var(--ease); }
+  @keyframes secousse { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
+
+  #app-contenu { display: none; }
+  header.entete {
+    background: var(--blanc); padding: 16px 20px 14px 20px; border-bottom: 1px solid var(--bordure);
+    position: sticky; top: 0; z-index: 20;
+  }
+  .entete-ligne { display: flex; align-items: center; gap: 10px; }
+  .logo-app { width: 32px; height: 32px; border-radius: 9px; object-fit: cover; box-shadow: var(--ombre); }
+  .entete-textes h1 { font-size: 16.5px; margin: 0; letter-spacing: -0.01em; }
+  .entete-textes .marque { font-size: 10.5px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--sauge-fonce); font-weight: 700; }
+  .lien-deconnexion { margin-left: auto; font-size: 11.5px; color: var(--charbon-doux); background: #f0f0ed; border: none; padding: 7px 12px; border-radius: 20px; cursor: pointer; }
+
+  main { max-width: 680px; margin: 0 auto; padding: 18px 16px 120px 16px; }
+
+  .barre-filtres { display: flex; gap: 8px; margin-bottom: 18px; overflow-x: auto; padding-bottom: 2px; }
   .filtre {
-    padding: 8px 14px;
-    border-radius: 20px;
-    font-size: 12.5px;
-    font-weight: 700;
-    background: var(--blanc);
-    border: 1px solid var(--bordure);
-    color: var(--charbon-doux);
-    cursor: pointer;
-    white-space: nowrap;
+    padding: 9px 16px; border-radius: 22px; font-size: 12.5px; font-weight: 700;
+    background: var(--blanc); border: 1.5px solid var(--bordure); color: var(--charbon-doux);
+    cursor: pointer; white-space: nowrap; transition: all 0.2s var(--ease);
   }
-  .filtre.actif {
-    background: var(--sauge-fonce);
-    color: white;
-    border-color: var(--sauge-fonce);
-  }
+  .filtre.actif { background: var(--sauge-fonce); color: white; border-color: var(--sauge-fonce); }
+  .filtre:active { transform: scale(0.96); }
 
   .carte-doc {
-    background: var(--blanc);
-    border: 1px solid var(--bordure);
-    border-radius: var(--rayon);
-    box-shadow: var(--ombre);
-    padding: 18px;
-    margin-bottom: 14px;
+    background: var(--blanc); border: 1px solid var(--bordure); border-radius: var(--rayon);
+    box-shadow: var(--ombre); padding: 20px; margin-bottom: 14px;
+    animation: glisse-entree 0.35s var(--ease) both; transition: box-shadow 0.2s;
   }
-  .carte-doc .ligne-titre {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 10px;
-    margin-bottom: 4px;
-  }
-  .carte-doc h3 { font-size: 15.5px; margin: 0; }
-  .badge {
-    font-size: 11px;
-    font-weight: 700;
-    padding: 3px 10px;
-    border-radius: 12px;
-    white-space: nowrap;
-    flex-shrink: 0;
-  }
+  @keyframes glisse-entree { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  .carte-doc .ligne-titre { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; margin-bottom: 5px; }
+  .carte-doc h3 { font-size: 15.5px; margin: 0; letter-spacing: -0.01em; }
+  .badge { font-size: 10.5px; font-weight: 700; padding: 4px 11px; border-radius: 12px; white-space: nowrap; flex-shrink: 0; }
   .badge-attente { background: var(--attente-fond); color: var(--attente-texte); }
   .badge-signe { background: var(--sauge-clair); color: var(--sauge-fonce); }
   .badge-annule { background: var(--alerte-fond); color: var(--alerte); }
 
-  .meta-doc {
-    font-size: 12px;
-    color: var(--charbon-doux);
-    margin-bottom: 12px;
-  }
+  .meta-doc { font-size: 12px; color: var(--charbon-doux); margin-bottom: 12px; }
 
-  .liste-signataires { margin: 10px 0; }
-  .ligne-signataire {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 8px 0;
-    border-top: 1px solid #f0f0ed;
-    font-size: 13px;
-  }
+  .progression-signatures { height: 5px; border-radius: 3px; background: #eeefec; overflow: hidden; margin-bottom: 14px; }
+  .progression-signatures .rempli { height: 100%; background: var(--sauge); border-radius: 3px; transition: width 0.5s var(--ease); }
+
+  .liste-signataires { margin: 4px 0; }
+  .ligne-signataire { display: flex; justify-content: space-between; align-items: center; padding: 9px 0; border-top: 1px solid #f0f0ed; font-size: 13px; }
   .ligne-signataire:first-child { border-top: none; }
   .ligne-signataire .nom { font-weight: 600; }
   .ligne-signataire .fonction { color: var(--charbon-doux); font-size: 11.5px; }
-  .puce-statut {
-    font-size: 11px;
-    font-weight: 700;
-    padding: 2px 8px;
-    border-radius: 10px;
-  }
+  .puce-statut { font-size: 10.5px; font-weight: 700; padding: 3px 9px; border-radius: 10px; }
   .puce-attente { background: var(--attente-fond); color: var(--attente-texte); }
   .puce-signe { background: var(--sauge-clair); color: var(--sauge-fonce); }
 
-  .actions-doc {
-    display: flex;
-    gap: 8px;
-    margin-top: 12px;
-    flex-wrap: wrap;
-  }
+  .actions-doc { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
   .btn-action {
-    flex: 1;
-    min-width: 140px;
-    padding: 10px;
-    border-radius: 8px;
-    border: none;
-    font-size: 13px;
-    font-weight: 700;
-    cursor: pointer;
-    text-align: center;
+    flex: 1; min-width: 140px; padding: 11px; border-radius: 11px; border: none;
+    font-size: 12.5px; font-weight: 700; cursor: pointer; text-align: center; transition: transform 0.1s;
   }
+  .btn-action:active { transform: scale(0.97); }
   .btn-telecharger { background: var(--sauge-fonce); color: white; }
   .btn-copier-lien { background: #eeefec; color: var(--charbon-doux); }
   .btn-annuler { background: var(--alerte-fond); color: var(--alerte); }
 
-  .liens-en-attente {
-    margin-top: 10px;
-    font-size: 12px;
-  }
-  .liens-en-attente summary {
-    cursor: pointer;
-    color: var(--sauge-fonce);
-    font-weight: 700;
-  }
-  .lien-copie-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 6px 0;
-    gap: 8px;
-  }
-  .lien-copie-item button {
-    background: var(--sauge-clair);
-    color: var(--sauge-fonce);
-    border: none;
-    padding: 5px 10px;
-    border-radius: 6px;
-    font-size: 11px;
-    font-weight: 700;
-    cursor: pointer;
-    flex-shrink: 0;
-  }
+  .liens-en-attente { margin-top: 10px; font-size: 12px; }
+  .liens-en-attente summary { cursor: pointer; color: var(--sauge-fonce); font-weight: 700; padding: 4px 0; }
+  .lien-copie-item { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; gap: 8px; }
+  .lien-copie-item button { background: var(--sauge-clair); color: var(--sauge-fonce); border: none; padding: 6px 11px; border-radius: 7px; font-size: 11px; font-weight: 700; cursor: pointer; }
 
   .skeleton {
     background: linear-gradient(90deg, #f0f0ee 25%, #e8e8e4 37%, #f0f0ee 63%);
-    background-size: 400% 100%;
-    animation: shimmer 1.4s ease infinite;
-    border-radius: var(--rayon);
-    height: 100px;
-    margin-bottom: 14px;
+    background-size: 400% 100%; animation: shimmer 1.4s ease infinite;
+    border-radius: var(--rayon); height: 110px; margin-bottom: 14px;
   }
-  @keyframes shimmer {
-    0% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
+  @keyframes shimmer { 0% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+
+  #etat-vide { display: none; text-align: center; padding: 50px 24px; animation: glisse-entree 0.4s var(--ease) both; }
+  #etat-vide .icone-vide {
+    width: 84px; height: 84px; margin: 0 auto 18px auto; border-radius: 50%;
+    background: var(--sauge-clair); display: flex; align-items: center; justify-content: center; font-size: 38px;
+  }
+  #etat-vide h3 { font-size: 16px; margin: 0 0 6px 0; }
+  #etat-vide p { color: var(--charbon-doux); font-size: 13px; margin: 0 0 20px 0; }
+  #etat-vide a.btn-creer-vide {
+    display: inline-block; background: var(--sauge-fonce); color: white; text-decoration: none;
+    padding: 13px 24px; border-radius: 12px; font-size: 13.5px; font-weight: 700;
   }
 
-  #etat-vide {
-    display: none;
-    text-align: center;
-    padding: 60px 24px;
-    color: var(--charbon-doux);
-  }
-  #etat-vide .icone { font-size: 40px; margin-bottom: 12px; }
+  .carte-maintenance { background: var(--alerte-fond); border: 1px solid #e8c9c4; border-radius: var(--rayon); padding: 18px; margin-top: 28px; }
+  .carte-maintenance h3 { font-size: 13px; color: var(--alerte); margin: 0 0 8px 0; }
+  .carte-maintenance p { font-size: 11.5px; color: var(--charbon-doux); margin: 0 0 12px 0; }
+  .btn-danger { background: var(--alerte); color: white; border: none; padding: 11px 16px; border-radius: 10px; font-size: 12.5px; font-weight: 700; cursor: pointer; }
 
-  #toast {
-    position: fixed;
-    left: 16px; right: 16px; bottom: 16px;
-    padding: 12px 16px;
-    border-radius: 8px;
-    font-size: 13px;
-    display: none;
-    z-index: 50;
-    box-shadow: var(--ombre);
-    background: var(--sauge-clair);
-    color: var(--sauge-fonce);
-  }
-
-  /* ===== Logo & en-tête premium ===== */
-  .logo-app {
-    width: 34px;
-    height: 34px;
-    border-radius: 8px;
-    object-fit: cover;
-    box-shadow: var(--ombre);
-  }
-  .header-marque-ligne { display: flex; align-items: center; gap: 8px; }
-  .lien-deconnexion {
-    font-size: 11.5px;
-    color: var(--charbon-doux);
-    text-decoration: underline;
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 0;
-    margin-top: 8px;
-  }
-
-  /* ===== Écran de connexion ===== */
-  #ecran-connexion {
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 24px;
-    background: linear-gradient(160deg, #f4f4f2 0%, var(--sauge-clair) 100%);
-  }
-  .carte-connexion {
-    background: var(--blanc);
-    border-radius: 18px;
-    box-shadow: 0 8px 32px rgba(43,43,43,0.10);
-    padding: 32px 26px;
-    max-width: 360px;
-    width: 100%;
-    text-align: center;
-  }
-  .carte-connexion img {
-    width: 64px; height: 64px;
-    border-radius: 14px;
-    margin-bottom: 14px;
-    box-shadow: var(--ombre);
-  }
-  .carte-connexion h1 { font-size: 18px; margin: 0 0 4px 0; }
-  .carte-connexion p.sous-titre-connexion {
-    font-size: 12.5px; color: var(--charbon-doux); margin: 0 0 22px 0;
-  }
-  .carte-connexion input {
-    width: 100%;
-    padding: 13px 14px;
-    border: 1px solid var(--bordure);
-    border-radius: 10px;
-    font-size: 14px;
-    font-family: inherit;
-    background: #fafaf8;
-    margin-bottom: 12px;
-  }
-  .carte-connexion button {
-    width: 100%;
-    padding: 14px;
-    background: var(--sauge-fonce);
-    color: white;
-    border: none;
-    border-radius: 10px;
-    font-size: 14.5px;
-    font-weight: 700;
-    cursor: pointer;
-  }
-  #erreur-connexion { color: var(--alerte); font-size: 12.5px; margin-top: 12px; display: none; }
-
-  /* ===== Navigation basse ===== */
   #nav-basse {
-    position: fixed;
-    left: 0; right: 0; bottom: 0;
-    background: var(--blanc);
-    border-top: 1px solid var(--bordure);
-    display: flex;
-    padding: 8px 12px calc(8px + env(safe-area-inset-bottom));
-    box-shadow: 0 -2px 12px rgba(43,43,43,0.06);
-    z-index: 15;
+    position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%);
+    background: var(--blanc); border-radius: 30px; box-shadow: var(--ombre-lg);
+    display: flex; padding: 6px; z-index: 25; border: 1px solid var(--bordure);
   }
   #nav-basse a {
-    flex: 1;
-    text-align: center;
-    text-decoration: none;
-    color: var(--charbon-doux);
-    font-size: 11px;
-    font-weight: 700;
-    padding: 6px 4px;
-    border-radius: 10px;
+    text-decoration: none; color: var(--charbon-doux); font-size: 12px; font-weight: 700;
+    padding: 10px 18px; border-radius: 24px; display: flex; align-items: center; gap: 6px; transition: all 0.25s var(--ease);
   }
-  #nav-basse a .icone-nav { display: block; font-size: 19px; margin-bottom: 2px; }
-  #nav-basse a.actif { color: var(--sauge-fonce); background: var(--sauge-clair); }
-  body.avec-nav-basse { padding-bottom: 84px; }
-  #app-contenu { display: none; }
+  #nav-basse a.actif { color: white; background: var(--sauge-fonce); }
 
-  /* ===== Zone maintenance (réinitialisation) ===== */
-  .carte-maintenance {
-    background: var(--alerte-fond);
-    border: 1px solid #e8c9c4;
-    border-radius: var(--rayon);
-    padding: 16px;
-    margin-top: 24px;
-  }
-  .carte-maintenance h3 { font-size: 13.5px; color: var(--alerte); margin: 0 0 8px 0; }
-  .carte-maintenance p { font-size: 12px; color: var(--charbon-doux); margin: 0 0 10px 0; }
-  .btn-danger {
-    background: var(--alerte);
-    color: white;
-    border: none;
-    padding: 10px 14px;
-    border-radius: 8px;
-    font-size: 12.5px;
-    font-weight: 700;
-    cursor: pointer;
+  #toast {
+    position: fixed; left: 16px; right: 16px; bottom: 90px; padding: 13px 16px; border-radius: 12px;
+    font-size: 13px; display: none; z-index: 50; box-shadow: var(--ombre-lg); text-align: center;
+    font-weight: 600; background: var(--charbon); color: white;
   }
 </style>
 </head>
@@ -353,25 +179,25 @@
   <div class="carte-connexion">
     <img src="logo-maphar.jpg" alt="Logo MAPHAR">
     <h1>MAPHAR Signature</h1>
-    <p class="sous-titre-connexion">Espace administrateur — connexion requise</p>
+    <p class="sous-titre-connexion">Espace administrateur</p>
     <input type="email" id="input-email-connexion" placeholder="Email" autocomplete="username">
     <input type="password" id="input-mdp-connexion" placeholder="Mot de passe" autocomplete="current-password">
     <button type="button" id="btn-connexion">Se connecter</button>
-    <p id="erreur-connexion"></p>
+    <p id="erreur-connexion">Email ou mot de passe incorrect.</p>
   </div>
 </div>
 
 <div id="app-contenu">
 
-<header>
-  <div class="header-marque-ligne">
+<header class="entete">
+  <div class="entete-ligne">
     <img class="logo-app" src="logo-maphar.jpg" alt="Logo MAPHAR">
-    <div class="header-marque">MAPHAR · Signature électronique</div>
+    <div class="entete-textes">
+      <div class="marque">MAPHAR Signature</div>
+      <h1>Tableau de bord</h1>
+    </div>
+    <button type="button" class="lien-deconnexion" id="btn-deconnexion">Déconnexion</button>
   </div>
-  <div class="header-ligne">
-    <h1>Tableau de bord</h1>
-  </div>
-  <button type="button" class="lien-deconnexion" id="btn-deconnexion">Se déconnecter</button>
 </header>
 
 <main>
@@ -389,20 +215,22 @@
   </div>
 
   <div id="etat-vide">
-    <div class="icone">📄</div>
-    <p>Aucun document dans cette catégorie.</p>
+    <div class="icone-vide">📄</div>
+    <h3>Rien à afficher ici</h3>
+    <p>Crée ton premier document à faire signer pour le voir apparaître ici.</p>
+    <a href="document-creer.html" class="btn-creer-vide">+ Créer un document</a>
   </div>
 
   <div class="carte-maintenance">
     <h3>⚠️ Zone de maintenance</h3>
-    <p>Supprime définitivement TOUS les documents et signatures enregistrés. Action irréversible — à utiliser uniquement pour repartir de zéro après des tests.</p>
+    <p>Supprime définitivement TOUS les documents et signatures enregistrés. Action irréversible.</p>
     <button type="button" class="btn-danger" id="btn-reinitialiser">Supprimer toutes les données</button>
   </div>
 </main>
 
 <nav id="nav-basse">
-  <a href="document-creer.html"><span class="icone-nav">➕</span>Créer</a>
-  <a href="tableau-de-bord.html" class="actif"><span class="icone-nav">📋</span>Tableau de bord</a>
+  <a href="document-creer.html">➕ Créer</a>
+  <a href="tableau-de-bord.html" class="actif">📋 Suivi</a>
 </nav>
 
 </div>
@@ -430,19 +258,14 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 
-// ============================================================
-// GARDE D'AUTHENTIFICATION
-// ============================================================
 onAuthStateChanged(auth, (utilisateur) => {
   if (utilisateur) {
     el("ecran-connexion").style.display = "none";
     el("app-contenu").style.display = "block";
-    document.body.classList.add("avec-nav-basse");
     chargerDocuments();
   } else {
     el("ecran-connexion").style.display = "flex";
     el("app-contenu").style.display = "none";
-    document.body.classList.remove("avec-nav-basse");
   }
 });
 
@@ -454,14 +277,12 @@ document.getElementById("btn-connexion").addEventListener("click", async () => {
   try {
     await signInWithEmailAndPassword(auth, email, motDePasse);
   } catch (err) {
-    erreur.textContent = "Email ou mot de passe incorrect.";
     erreur.style.display = "block";
   }
 });
 
 document.getElementById("btn-deconnexion").addEventListener("click", () => signOut(auth));
 
-// ⚠️ À adapter si ton dépôt GitHub Pages a une URL différente
 const BASE_URL_SIGNATURE = "https://amanimarcelnguessan-create.github.io/Maphar-Signature/signer.html";
 
 const el = (id) => document.getElementById(id);
@@ -484,9 +305,6 @@ function formaterDate(timestamp) {
     " à " + d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
 }
 
-// ============================================================
-// CHARGEMENT DES DOCUMENTS
-// ============================================================
 async function chargerDocuments() {
   try {
     const q = query(collection(db, "documents"), orderBy("dateCreation", "desc"));
@@ -500,9 +318,6 @@ async function chargerDocuments() {
   }
 }
 
-// ============================================================
-// AFFICHAGE (avec filtre actif)
-// ============================================================
 function afficherListe() {
   const conteneur = el("conteneur-liste");
   conteneur.innerHTML = "";
@@ -529,6 +344,7 @@ function construireCarte(d) {
 
   const nbSignes = d.signataires.filter(s => s.statut === "signe").length;
   const nbTotal = d.signataires.length;
+  const pourcentage = nbTotal > 0 ? Math.round((nbSignes / nbTotal) * 100) : 0;
 
   carte.innerHTML = `
     <div class="ligne-titre">
@@ -536,8 +352,9 @@ function construireCarte(d) {
       <span class="badge ${classesBadge[d.statutGlobal] || 'badge-attente'}">${libellesBadge[d.statutGlobal] || d.statutGlobal}</span>
     </div>
     <div class="meta-doc">
-      ${libelleType(d.type)} · Créé le ${formaterDate(d.dateCreation)} · ${nbSignes}/${nbTotal} signature(s)
+      ${libelleType(d.type)} · Créé le ${formaterDate(d.dateCreation)}
     </div>
+    <div class="progression-signatures"><div class="rempli" style="width:${pourcentage}%"></div></div>
     <div class="liste-signataires"></div>
   `;
 
@@ -557,7 +374,6 @@ function construireCarte(d) {
     listeSign.appendChild(ligne);
   });
 
-  // Liens à copier pour les signataires pas encore signés
   const enAttente = d.signataires.filter(s => s.statut !== "signe");
   if (enAttente.length > 0 && d.statutGlobal !== "annule") {
     const details = document.createElement("details");
@@ -577,7 +393,6 @@ function construireCarte(d) {
     carte.appendChild(details);
   }
 
-  // Actions
   const actions = document.createElement("div");
   actions.className = "actions-doc";
 
@@ -605,8 +420,8 @@ function construireCarte(d) {
     const btnAnnuler = document.createElement("button");
     btnAnnuler.className = "btn-action btn-annuler";
     btnAnnuler.type = "button";
-    btnAnnuler.textContent = "Annuler ce document";
     btnAnnuler.addEventListener("click", () => annulerDocument(d.id, carte));
+    btnAnnuler.textContent = "Annuler ce document";
     actions.appendChild(btnAnnuler);
   }
 
@@ -619,9 +434,6 @@ function libelleType(type) {
   return { pv: "Procès-verbal", compte_rendu: "Compte rendu", courrier: "Courrier" }[type] || type;
 }
 
-// ============================================================
-// TÉLÉCHARGER LE PDF FINAL
-// ============================================================
 function telechargerPdf(base64, titre) {
   const buffer = base64VersArrayBuffer(base64);
   const blob = new Blob([buffer], { type: "application/pdf" });
@@ -635,9 +447,6 @@ function telechargerPdf(base64, titre) {
   URL.revokeObjectURL(url);
 }
 
-// ============================================================
-// ANNULER UN DOCUMENT
-// ============================================================
 async function annulerDocument(docId, carteElement) {
   const confirmation = confirm("Annuler définitivement ce document ? Les liens de signature ne fonctionneront plus.");
   if (!confirmation) return;
@@ -652,9 +461,6 @@ async function annulerDocument(docId, carteElement) {
   }
 }
 
-// ============================================================
-// FILTRES
-// ============================================================
 document.querySelectorAll(".filtre").forEach(bouton => {
   bouton.addEventListener("click", () => {
     document.querySelectorAll(".filtre").forEach(b => b.classList.remove("actif"));
@@ -671,9 +477,6 @@ function afficherToast(message) {
   setTimeout(() => { toast.style.display = "none"; }, 3500);
 }
 
-// ============================================================
-// RÉINITIALISATION TOTALE (zone de maintenance)
-// ============================================================
 el("btn-reinitialiser").addEventListener("click", async () => {
   const premiereConfirmation = confirm(
     "⚠️ Ceci va supprimer DÉFINITIVEMENT tous les documents et signatures enregistrés. Continuer ?"
