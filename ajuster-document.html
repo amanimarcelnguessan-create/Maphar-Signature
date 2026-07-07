@@ -247,7 +247,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 import {
   getFirestore, doc, getDoc, updateDoc, collection, query, where, getDocs
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { PDFDocument } from "https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.esm.min.js";
+import { PDFDocument, StandardFonts, rgb } from "https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.esm.min.js";
 import {
   getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
@@ -315,6 +315,65 @@ function arrayBufferVersBase64(buffer) {
   return btoa(bin);
 }
 
+// Identique à signer.html : ajoute une page récapitulative une fois que
+// TOUS les signataires ont signé (préservée aussi après un ajustement).
+async function ajouterPageCertificat(pdfDoc, signataires, largeurPage, hauteurPage) {
+  const page = pdfDoc.addPage([largeurPage, hauteurPage]);
+  const police = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const policeGrasse = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+  const vertSauge = rgb(0.29, 0.42, 0.30);
+  const gris = rgb(0.42, 0.48, 0.44);
+
+  let y = hauteurPage - 70;
+  page.drawText("Certificat de signature électronique", {
+    x: 50, y, size: 16, font: policeGrasse, color: vertSauge
+  });
+  y -= 30;
+  page.drawText("MAPHAR — Mutuelle Pour l'Assurance des Pharmaciens", {
+    x: 50, y, size: 10, font: police, color: gris
+  });
+  y -= 40;
+  page.drawText("Signataires :", { x: 50, y, size: 11, font: policeGrasse, color: rgb(0.13, 0.15, 0.12) });
+  y -= 22;
+
+  signataires.slice().sort((a, b) => a.ordre - b.ordre).forEach(s => {
+    const dateTexte = s.dateSignature && s.dateSignature.toDate
+      ? s.dateSignature.toDate().toLocaleString("fr-FR", { dateStyle: "long", timeStyle: "short" })
+      : "—";
+    page.drawText(`• ${s.nom} (${s.fonction})`, { x: 60, y, size: 10.5, font: policeGrasse });
+    y -= 15;
+    page.drawText(`  Signé le ${dateTexte}`, { x: 60, y, size: 10, font: police, color: gris });
+    y -= 22;
+  });
+
+  y -= 10;
+  page.drawText(
+    "Ce document a été signé électroniquement conformément à la Loi N°2013-546",
+    { x: 50, y, size: 9, font: police, color: gris }
+  );
+  y -= 13;
+  page.drawText(
+    "relative aux transactions électroniques (Côte d'Ivoire). Chaque signature est",
+    { x: 50, y, size: 9, font: police, color: gris }
+  );
+  y -= 13;
+  page.drawText(
+    "horodatée et tracée. L'empreinte numérique du document final est disponible",
+    { x: 50, y, size: 9, font: police, color: gris }
+  );
+  y -= 13;
+  page.drawText(
+    "dans le tableau de bord administrateur MAPHAR Signature.",
+    { x: 50, y, size: 9, font: police, color: gris }
+  );
+}
+
+async function calculerEmpreinteSHA256(bytes) {
+  const hashBuffer = await crypto.subtle.digest("SHA-256", bytes);
+  const octets = Array.from(new Uint8Array(hashBuffer));
+  return octets.map(o => o.toString(16).padStart(2, "0")).join("");
+}
+
 async function demarrer() {
   if (!docId) { afficherErreur(); return; }
   try {
@@ -363,7 +422,10 @@ function afficherErreur() {
 }
 
 async function afficherPDF() {
-  const base64Pdf = documentData.pdfActuelBase64 || documentData.pdfOriginalBase64;
+  // On affiche toujours le PDF ORIGINAL (sans signatures ni certificat) :
+  // c'est aussi la base utilisée par la régénération, donc la page vue ici
+  // correspond exactement à celle sur laquelle les signatures seront replacées.
+  const base64Pdf = documentData.pdfOriginalBase64;
   const buffer = base64VersArrayBuffer(base64Pdf);
   window.pdfjsLib.GlobalWorkerOptions.workerSrc =
     "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
@@ -471,18 +533,28 @@ el("btn-regenerer").addEventListener("click", async () => {
       });
     }
 
-    const nouveauxBytes = await pdfDoc.save();
-    const nouveauBase64 = arrayBufferVersBase64(nouveauxBytes);
-
     const nouveauxSignataires = documentData.signataires.map(s =>
       positionsAjustees[s.lienToken]
         ? { ...s, positionSignature: positionsAjustees[s.lienToken] }
         : s
     );
+    const tousOntSigne = nouveauxSignataires.every(s => s.statut === "signe");
+
+    // Cohérence avec signer.html : si le document est intégralement signé,
+    // on rajoute la page de certificat (perdue sinon, puisqu'on repart
+    // toujours du PDF original vierge à chaque régénération).
+    if (tousOntSigne) {
+      await ajouterPageCertificat(pdfDoc, nouveauxSignataires, width, height);
+    }
+
+    const nouveauxBytes = await pdfDoc.save();
+    const nouveauBase64 = arrayBufferVersBase64(nouveauxBytes);
+    const empreinteSHA256 = await calculerEmpreinteSHA256(nouveauxBytes);
 
     await updateDoc(documentRef, {
       pdfActuelBase64: nouveauBase64,
-      signataires: nouveauxSignataires
+      signataires: nouveauxSignataires,
+      empreinteSHA256
     });
 
     afficherToast("PDF régénéré avec succès !", "succes");
